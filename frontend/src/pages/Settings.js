@@ -56,12 +56,17 @@ const Settings = () => {
                             src={user.picture}
                             alt={user.name}
                             className="w-16 h-16 rounded-full border-2 border-aligna-border"
+                            onError={e => { e.target.onerror = null; e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
                         />
-                    ) : (
-                        <div className="w-16 h-16 rounded-full bg-aligna-surface-secondary flex items-center justify-center">
-                            <User size={24} className="text-aligna-text-secondary" />
-                        </div>
-                    )}
+                    ) : null}
+                    <div
+                        className="w-16 h-16 rounded-full bg-aligna-primary/20 items-center justify-center shrink-0"
+                        style={{ display: user?.picture ? 'none' : 'flex' }}
+                    >
+                        <span className="font-heading text-2xl text-aligna-primary leading-none">
+                            {(user?.name || 'U')[0].toUpperCase()}
+                        </span>
+                    </div>
                     <div>
                         <h2 className="font-heading text-xl text-aligna-text">{user?.name || 'User'}</h2>
                         <p className="text-aligna-text-secondary font-body text-sm">{user?.email}</p>

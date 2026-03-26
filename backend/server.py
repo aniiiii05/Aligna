@@ -189,7 +189,7 @@ async def create_goal(goal_data: GoalCreate, user=Depends(get_current_user)):
 
 @api_router.put("/goals/{goal_id}")
 async def update_goal(goal_id: str, goal_data: GoalUpdate, user=Depends(get_current_user)):
-    update_dict = {k: v for k, v in goal_data.model_dump().items() if v is not None}
+    update_dict = goal_data.model_dump(exclude_unset=True)
     if not update_dict:
         raise HTTPException(status_code=400, detail="No update data")
     result = await db.goals.update_one(
@@ -244,7 +244,9 @@ async def create_ritual_entry(entry_data: RitualEntryCreate, user=Depends(get_cu
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    expected = SESSION_COUNTS.get(entry_data.session_type, 3)
+    if entry_data.session_type not in SESSION_COUNTS:
+        raise HTTPException(status_code=400, detail="session_type must be morning, midday, or night")
+    expected = SESSION_COUNTS[entry_data.session_type]
     if len(entry_data.writings) != expected:
         raise HTTPException(
             status_code=400,
