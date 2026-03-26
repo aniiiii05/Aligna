@@ -1,0 +1,109 @@
+{
+  "project_name": "Aligna",
+  "theme": "light",
+  "archetype": "Organic & Earthy",
+  "core_philosophy": "Serene, premium, emotionally reinforcing. A sanctuary from digital noise. Fusing spiritual mindfulness with clean, modern utility.",
+  "colors": {
+    "background": "#FDFBF7",
+    "surface": "#FFFFFF",
+    "surface_secondary": "#F3F0EA",
+    "primary": "#879C93",
+    "primary_hover": "#748880",
+    "accent": "#D4A373",
+    "text_primary": "#2C3531",
+    "text_secondary": "#6E7A75",
+    "border": "#E6E2D8",
+    "success": "#8D9B89",
+    "error": "#C67D6F"
+  },
+  "typography": {
+    "heading_font": "Cormorant Garamond, serif",
+    "body_font": "Outfit, sans-serif",
+    "scales": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter leading-none font-medium",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-snug font-medium",
+      "h3": "text-xl sm:text-2xl tracking-tight leading-snug",
+      "h4": "text-lg sm:text-xl",
+      "body": "text-base leading-relaxed font-light",
+      "label": "text-xs tracking-[0.2em] uppercase font-medium"
+    },
+    "rules": "Never use Inter or generic sans for headings. Use letter-spacing strictly as defined. Limit H1 usage. Center align headings only in ritual or hero contexts, left align elsewhere for readability."
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing Philosophy. Utilize 2-3x typical padding. Tension through asymmetry in marketing, clean structured grids in dashboards.",
+    "container_padding": "p-6 md:p-12 lg:p-16",
+    "grid_strategy": {
+      "dashboard": "MODE B: The Control Room Grid, optimized for calm. grid-cols-1 md:grid-cols-3 lg:grid-cols-4. gap-6.",
+      "marketing": "MODE A: The Tetris Grid. Asymmetrical, overlapping content with plenty of negative space."
+    },
+    "border_radius": "rounded-2xl to rounded-3xl for main containers, rounded-xl for inner elements to maintain softness."
+  },
+  "surfaces": {
+    "dashboard_cards": "Flat background (surface), 1px subtle border (#E6E2D8), no shadow default. Hover: shadow-sm border-[#D4A373]/30 transition-all duration-300.",
+    "ritual_mode": "Completely distraction-free. Solid background of #FDFBF7. Hide main navigation. Use large serif typography with plenty of vertical breathing room.",
+    "header": "Crystal Glass variant: backdrop-blur-xl bg-[#FDFBF7]/80, with a delicate 1px inner stroke border-b border-[#E6E2D8]/50."
+  },
+  "motion": {
+    "philosophy": "Calm, slow, and intentional. No bouncy spring animations.",
+    "transitions": "transition-all duration-500 ease-out",
+    "interactions": "Hover states must have slightly lifted (-translate-y-1) elements and deepen text color."
+  },
+  "components": {
+    "buttons": "Primary: bg-[#879C93] text-white rounded-full px-8 py-3, subtle hover effect. Secondary: border border-[#E6E2D8] text-[#2C3531] rounded-full px-6 py-2. Never use standard rectangular buttons.",
+    "inputs": "Shadcn overrides: Soft rounded-xl or rounded-full with subtle background (#F3F0EA), border-transparent focus:border-[#879C93] focus:ring-1 focus:ring-[#879C93]/30.",
+    "cards": "Minimalist cardless or subtle bento-box style. Avoid cluttered card headers.",
+    "navigation": "Bottom nav for mobile (fixed, glassmorphism), Top nav for desktop."
+  },
+  "media_assets": {
+    "logo_and_brand": {
+      "main_brand_image": "/assets/1255.png",
+      "description": "Use as splash screen, login page hero anchor, or premium visual element in the upgrade modal."
+    },
+    "icons": {
+      "path_prefix": "/assets/icons/",
+      "available": [
+        "Lotus.svg", "Candle.svg", "Mindfulness.svg", "Ajna.svg", "Yin Yang.svg", 
+        "Yoga.svg", "Hamsa.svg", "Singing Bowl.svg", "Book.svg", "Calendar.svg", 
+        "Equanimity.svg", "Sahassara.svg", "Manipura.svg", "Water.svg", 
+        "Essential Oil.svg", "Diffuser.svg"
+      ],
+      "usage": "Use 'Lotus.svg' and 'Mindfulness.svg' for dashboard snapshot. 'Candle.svg' or 'Water.svg' for evening/morning rituals. 'Calendar.svg' for streaks. 'Book.svg' for journaling/3-6-9 history. 'Hamsa.svg' or 'Ajna.svg' for premium subscription icons."
+    },
+    "illustrations": {
+      "path": "/assets/illustrations/",
+      "usage": "Use as heroes for empty states (e.g., no goals yet), onboarding success, and subscription paywall highlights."
+    },
+    "external_images": [
+      {
+        "url": "https://images.unsplash.com/photo-1567372704182-ec2ea042c937?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwyfHx6ZW4lMjBnYXJkZW4lMjBzYW5kfGVufDB8fHx8MTc3NDUyMDU0M3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Zen garden sand pattern.",
+        "category": "background",
+        "usage": "Use for the premium subscription upgrade page background or ambient texture on the login view."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1767486029534-d7a327c9b9c8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MjJ8MHwxfHNlYXJjaHwyfHxjYWxtJTIwYWVzdGhldGljJTIwZ3JhZGllbnQlMjBza3l8ZW58MHx8fHwxNzc0NTIwNTQ0fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Calm sunset gradient over ocean.",
+        "category": "hero",
+        "usage": "Use as a full-bleed background for the immersive evening 9x ritual session, set with a bg-black/20 overlay."
+      }
+    ]
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure minimum 4.5:1 for normal text. Avoid light gray text on white.",
+    "testing": "All interactive elements, forms, links, and buttons MUST include a data-testid attribute in kebab-case (e.g., data-testid='ritual-submit-button').",
+    "reduced_motion": "Respect prefers-reduced-motion media query for all animations."
+  },
+  "instructions_to_main_agent": [
+    "You are building a React frontend (.js/.jsx extensions).",
+    "Prioritize mobile-first design with a bottom navigation bar for mobile viewports, adhering strictly to the bottom-nav paradigm for core routes.",
+    "The 3-6-9 ritual screen must be an immersive and distraction-free writing experience. Use soft typography and strip away all unrelated UI components.",
+    "Use Shadcn UI components but heavily override them via Tailwind to remove the default 'Vercel' tech look, shifting them strictly to the Organic & Earthy theme.",
+    "Font requirement: Add Cormorant Garamond (headings) and Outfit (body) via Google Fonts. Do not use generic fonts like Inter, Roboto, or Open Sans.",
+    "Integrate the provided SVGs dynamically. The Streak feature should uniquely utilize icons like 'Candle.svg' or 'Lotus.svg' to visually represent progress.",
+    "Do not invent new arbitrary color schemes. Strictly use the defined colors (Sage green primary, Sand background).",
+    "Only implement in-app reminders as requested, omitting email notifications.",
+    "Implement Google OAuth login as the primary entry point.",
+    "Goal limits are tied to subscription tiers (Free: 1, Paid: 3-10). Ensure the UI gracefully handles these limits with an upsell to the premium plans.",
+    "Ensure every page and component has proper data-testid attributes for testing."
+  ]
+}
