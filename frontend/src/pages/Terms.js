@@ -75,7 +75,7 @@ const Terms = () => {
 
                     <Section title="5. Subscription and Payments">
                         <p>
-                            Aligna offers free and paid subscription plans. Paid plans are billed on a monthly basis through Polar, our payment processor. Prices are displayed in USD.
+                            Aligna offers free and paid subscription plans. Paid plans are billed on a monthly basis through Lemon Squeezy, our payment processor and merchant of record. Prices are displayed in USD.
                         </p>
                         <p>
                             <strong className="text-aligna-text">Refund Policy:</strong> We offer a 7-day refund on first-time subscriptions. To request a refund, contact us at the email address below. Refunds are processed within 5–10 business days.

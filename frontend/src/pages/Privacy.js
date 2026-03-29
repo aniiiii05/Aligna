@@ -99,7 +99,7 @@ const Privacy = () => {
                         <p>We use the following third-party services:</p>
                         <ul className="list-disc list-inside space-y-1 ml-2">
                             <li><strong className="text-aligna-text">Google OAuth</strong> — for secure sign-in (subject to Google's Privacy Policy)</li>
-                            <li><strong className="text-aligna-text">Polar</strong> — for payment processing (subject to Polar's Privacy Policy)</li>
+                            <li><strong className="text-aligna-text">Lemon Squeezy</strong> — for payment processing and subscription management (subject to Lemon Squeezy's Privacy Policy)</li>
                             <li><strong className="text-aligna-text">MongoDB Atlas</strong> — for database hosting</li>
                             <li><strong className="text-aligna-text">Render</strong> — for backend hosting</li>
                             <li><strong className="text-aligna-text">Vercel</strong> — for frontend hosting</li>
