@@ -12,7 +12,8 @@ import base64
 import secrets
 from urllib.parse import urlencode
 from pathlib import Path
-from pydantic import BaseModel
+import re as _re
+from pydantic import BaseModel, field_validator
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -110,6 +111,21 @@ class RitualEntryCreate(BaseModel):
 class CheckoutRequest(BaseModel):
     plan: str
     origin_url: str
+
+class WaitlistSignup(BaseModel):
+    email: str
+
+    model_config = {"str_strip_whitespace": True}
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        v = v.lower().strip()
+        if len(v) > 254:
+            raise ValueError("Email address is too long")
+        if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', v):
+            raise ValueError("Invalid email address")
+        return v
 
 
 # --- Auth Helper ---
@@ -600,6 +616,58 @@ async def lemonsqueezy_webhook(request: Request):
         logger.error(f"Lemon Squeezy webhook error: {e}")
 
     return {"received": True}
+
+
+# --- WAITLIST ROUTES ---
+@api_router.post("/waitlist")
+async def join_waitlist(body: WaitlistSignup):
+    """Save an email to the waitlist. Idempotent — returns count either way."""
+    existing = await db.waitlist.find_one({"email": body.email})
+    if existing:
+        count = await db.waitlist.count_documents({})
+        return {"already_joined": True, "count": count}
+
+    await db.waitlist.insert_one({
+        "email": body.email,
+        "joined_at": datetime.now(timezone.utc).isoformat(),
+        "source": "waitlist_page",
+    })
+    count = await db.waitlist.count_documents({})
+    logger.info(f"Waitlist signup: {body.email} (total: {count})")
+    return {"success": True, "count": count}
+
+
+@api_router.get("/waitlist/count")
+async def get_waitlist_count():
+    """Public endpoint — returns total waitlist signups."""
+    count = await db.waitlist.count_documents({})
+    return {"count": count}
+
+
+@api_router.get("/waitlist/admin")
+async def get_waitlist_admin(request: Request):
+    """Protected analytics endpoint. Requires X-Admin-Key header matching WAITLIST_ADMIN_KEY env var."""
+    admin_key = os.environ.get("WAITLIST_ADMIN_KEY", "")
+    provided_key = request.headers.get("x-admin-key", "")
+    if not admin_key or not provided_key or not hmac.compare_digest(admin_key, provided_key):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    total = await db.waitlist.count_documents({})
+    signups = await db.waitlist.find({}, {"_id": 0}).sort("joined_at", -1).to_list(500)
+
+    # Aggregate by day (last 30 days)
+    from collections import Counter
+    daily: Counter = Counter()
+    for s in signups:
+        day = (s.get("joined_at") or "")[:10]
+        if day:
+            daily[day] += 1
+
+    return {
+        "total": total,
+        "recent": signups[:100],
+        "daily_breakdown": dict(sorted(daily.items(), reverse=True)[:30]),
+    }
 
 
 @api_router.get("/")

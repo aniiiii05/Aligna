@@ -14,6 +14,8 @@ import Settings from './pages/Settings';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
+import Waitlist from './pages/Waitlist';
+import WaitlistAdmin from './pages/WaitlistAdmin';
 import NotFound from './pages/NotFound';
 
 const MainLayout = () => (
@@ -37,6 +39,8 @@ function App() {
                             <Route path="/terms" element={<Terms />} />
                             <Route path="/privacy" element={<Privacy />} />
                             <Route path="/contact" element={<Contact />} />
+                            <Route path="/waitlist" element={<Waitlist />} />
+                            <Route path="/waitlist-admin" element={<WaitlistAdmin />} />
 
                             {/* Protected app routes */}
                             <Route
