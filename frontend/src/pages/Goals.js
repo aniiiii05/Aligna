@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Trash2, Edit2, X, Check, Lock } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 const PLAN_LIMITS = { free: 1, pro: 3, premium: 10 };
 const CATEGORIES = [
@@ -123,6 +123,7 @@ const Goals = () => {
     const [showModal, setShowModal] = useState(false);
     const [editGoal, setEditGoal] = useState(null);
     const [deleting, setDeleting] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null); // goalId pending confirmation
 
     const limit = PLAN_LIMITS[user?.plan] || 1;
     const atLimit = goals.length >= limit;
@@ -153,7 +154,6 @@ const Goals = () => {
     };
 
     const handleDelete = async (goalId) => {
-        if (!window.confirm('Remove this intention?')) return;
         setDeleting(goalId);
         try {
             await axios.delete(`${API}/goals/${goalId}`, { withCredentials: true });
@@ -162,6 +162,7 @@ const Goals = () => {
             console.error(err);
         } finally {
             setDeleting(null);
+            setConfirmDelete(null);
         }
     };
 
@@ -248,19 +249,37 @@ const Goals = () => {
                                     <div className="flex items-center gap-1 shrink-0">
                                         <button
                                             data-testid={`edit-goal-${goal.goal_id}`}
-                                            onClick={() => { setEditGoal(goal); setShowModal(true); }}
+                                            onClick={() => { setEditGoal(goal); setShowModal(true); setConfirmDelete(null); }}
                                             className="p-2 rounded-full hover:bg-aligna-surface-secondary transition-colors"
                                         >
                                             <Edit2 size={15} className="text-aligna-text-secondary" />
                                         </button>
-                                        <button
-                                            data-testid={`delete-goal-${goal.goal_id}`}
-                                            onClick={() => handleDelete(goal.goal_id)}
-                                            disabled={deleting === goal.goal_id}
-                                            className="p-2 rounded-full hover:bg-red-50 transition-colors"
-                                        >
-                                            <Trash2 size={15} className="text-aligna-error" />
-                                        </button>
+                                        {confirmDelete === goal.goal_id ? (
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    data-testid={`confirm-delete-${goal.goal_id}`}
+                                                    onClick={() => handleDelete(goal.goal_id)}
+                                                    disabled={deleting === goal.goal_id}
+                                                    className="text-[11px] font-body font-medium text-white bg-aligna-error px-3 py-1 rounded-full disabled:opacity-50"
+                                                >
+                                                    {deleting === goal.goal_id ? '...' : 'Remove'}
+                                                </button>
+                                                <button
+                                                    onClick={() => setConfirmDelete(null)}
+                                                    className="text-[11px] font-body text-aligna-text-secondary hover:text-aligna-text px-2 py-1"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                data-testid={`delete-goal-${goal.goal_id}`}
+                                                onClick={() => setConfirmDelete(goal.goal_id)}
+                                                className="p-2 rounded-full hover:bg-red-50 transition-colors"
+                                            >
+                                                <Trash2 size={15} className="text-aligna-error" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

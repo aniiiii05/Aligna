@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Check } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 const SESSION_CONFIG = {
     morning: { label: 'Morning Ritual', count: 3, icon: '/assets/icons/Candle.svg', subtitle: 'Plant the seed of intention', bg: 'bg-amber-50', accent: '#D4A373' },
@@ -99,10 +99,12 @@ const Ritual = () => {
     const handleSubmit = async (allWritings) => {
         setSubmitting(true);
         setError('');
+        // Send the user's local date so timezone differences don't shift "today"
+        const localDate = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD
         try {
             await axios.post(
                 `${API}/rituals/entry`,
-                { goal_id: selectedGoalId, session_type: selectedSession, writings: allWritings },
+                { goal_id: selectedGoalId, session_type: selectedSession, writings: allWritings, local_date: localDate },
                 { withCredentials: true }
             );
             setShowCelebration(true);

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -20,12 +20,6 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        // CRITICAL: If returning from OAuth callback, skip the /me check.
-        // AuthCallback will exchange the session_id and establish the session first.
-        if (window.location.hash?.includes('session_id=')) {
-            setLoading(false);
-            return;
-        }
         checkAuth();
     }, [checkAuth]);
 

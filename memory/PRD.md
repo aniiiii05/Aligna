@@ -9,8 +9,8 @@
 ## Architecture
 - **Frontend**: React (CRA + Craco), TailwindCSS, React Router v7, Axios, Lucide React  
 - **Backend**: FastAPI + Motor (async MongoDB) + httpx  
-- **Auth**: Emergent-managed Google OAuth (session_token cookie, 7-day expiry)  
-- **Payments**: Stripe via emergentintegrations (sk_test_emergent test key)  
+- **Auth**: Google OAuth (session_token cookie, 7-day expiry)  
+- **Payments**: Stripe Checkout
 - **Assets**: SVG icons at /public/assets/icons/, illustrations at /public/assets/illustrations/
 
 ## User Personas
@@ -20,7 +20,7 @@
 ## Core Features Implemented
 
 ### Authentication (2026-03-26)
-- Emergent-managed Google OAuth login
+- Google OAuth login
 - Session token stored in httpOnly cookie (7-day expiry)
 - Auth callback handles #session_id= hash fragment
 - AuthContext provides global auth state

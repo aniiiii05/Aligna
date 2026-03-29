@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Check, Lock, Crown } from 'lucide-react';
+import { Check } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 const PLANS = [
     {
@@ -69,35 +69,33 @@ const Upgrade = () => {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [error, setError] = useState('');
 
-    // Check for Stripe return
+    // Check for Lemon Squeezy payment return (?checkout=success)
     useEffect(() => {
-        const sessionId = searchParams.get('session_id');
-        if (!sessionId) return;
+        if (searchParams.get('checkout') !== 'success') return;
+        const initialPlan = user?.plan || 'free';
 
         setCheckingPayment(true);
-        const pollStatus = async (attempts = 0) => {
-            if (attempts >= 6) {
+        // Poll /auth/me until the plan changes (webhook updates it server-side)
+        const pollPlan = async (attempts = 0) => {
+            if (attempts >= 15) {
                 setCheckingPayment(false);
-                setError('Payment verification timed out. Please refresh.');
+                setError('Plan not updated yet — your payment may still be processing. Please refresh in a moment.');
                 return;
             }
             try {
-                const res = await axios.get(`${API}/payments/status/${sessionId}`, { withCredentials: true });
-                if (res.data.payment_status === 'paid') {
+                const updated = await refreshUser();
+                if (updated && updated.plan !== initialPlan) {
                     setCheckingPayment(false);
                     setPaymentSuccess(true);
-                    await refreshUser();
-                } else if (res.data.status === 'expired') {
-                    setCheckingPayment(false);
-                    setError('Payment session expired. Please try again.');
                 } else {
-                    setTimeout(() => pollStatus(attempts + 1), 2000);
+                    setTimeout(() => pollPlan(attempts + 1), 2000);
                 }
             } catch {
-                setTimeout(() => pollStatus(attempts + 1), 2000);
+                setTimeout(() => pollPlan(attempts + 1), 2000);
             }
         };
-        pollStatus();
+        // Brief initial delay to let the webhook arrive
+        setTimeout(() => pollPlan(), 1500);
     }, []);
 
     const handleUpgrade = async (planId) => {
@@ -244,7 +242,7 @@ const Upgrade = () => {
 
             {/* Trust indicators */}
             <div className="text-center space-y-2">
-                <p className="text-aligna-text-secondary text-xs font-body">Secure payment via Stripe</p>
+                <p className="text-aligna-text-secondary text-xs font-body">Secure payment via Lemon Squeezy · Cancel anytime</p>
                 <div className="flex justify-center gap-4">
                     {['/assets/icons/Equanimity.svg', '/assets/icons/Yin Yang.svg'].map((icon, i) => (
                         <img key={i} src={icon} alt="" className="w-5 h-5 opacity-30" />

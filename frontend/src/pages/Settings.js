@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Bell, BellOff, Crown, User } from 'lucide-react';
+import { LogOut, Bell, BellOff, Crown, X } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 const PLAN_LABELS = { free: 'Seed (Free)', pro: 'Bloom (Pro)', premium: 'Radiance (Premium)' };
 
@@ -13,6 +13,7 @@ const Settings = () => {
     const navigate = useNavigate();
     const [notifStatus, setNotifStatus] = useState(Notification?.permission || 'default');
     const [loggingOut, setLoggingOut] = useState(false);
+    const [showNotifInfo, setShowNotifInfo] = useState(false);
 
     const handleLogout = async () => {
         setLoggingOut(true);
@@ -21,19 +22,18 @@ const Settings = () => {
     };
 
     const handleNotifications = async () => {
-        if (!('Notification' in window)) {
-            alert('Notifications not supported in this browser');
-            return;
-        }
+        if (!('Notification' in window)) return;
         if (notifStatus === 'granted') {
-            setNotifStatus('denied');
+            // Browsers don't allow JS to revoke permission — guide the user
+            setShowNotifInfo(true);
             return;
         }
+        if (notifStatus === 'denied') return; // blocked in browser settings
         const perm = await Notification.requestPermission();
         setNotifStatus(perm);
         if (perm === 'granted') {
             new Notification('Aligna', {
-                body: 'You\'ll now receive ritual reminders',
+                body: "You'll now receive ritual reminders",
                 icon: '/assets/icons/Lotus.svg',
             });
         }
@@ -172,6 +172,35 @@ const Settings = () => {
                 </div>
             </div>
 
+            {/* Notification info sheet */}
+            {showNotifInfo && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center">
+                    <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNotifInfo(false)} />
+                    <div className="relative z-10 w-full max-w-lg bg-aligna-surface rounded-t-3xl p-6 shadow-xl animate-float-up">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-heading text-xl text-aligna-text">Disable Notifications</h3>
+                            <button onClick={() => setShowNotifInfo(false)} className="p-2 rounded-full hover:bg-aligna-surface-secondary">
+                                <X size={18} className="text-aligna-text-secondary" />
+                            </button>
+                        </div>
+                        <p className="text-aligna-text-secondary font-body text-sm leading-relaxed mb-5">
+                            To disable notifications, open your browser's site settings and revoke notification permission for this site.
+                        </p>
+                        <div className="bg-aligna-surface-secondary rounded-2xl p-4 text-xs font-body text-aligna-text-secondary space-y-1">
+                            <p><strong className="text-aligna-text">Chrome:</strong> Address bar → lock icon → Notifications → Block</p>
+                            <p><strong className="text-aligna-text">Safari:</strong> Settings → Websites → Notifications → Deny</p>
+                            <p><strong className="text-aligna-text">Firefox:</strong> Address bar → lock icon → Connection info → Notifications</p>
+                        </div>
+                        <button
+                            onClick={() => setShowNotifInfo(false)}
+                            className="w-full mt-4 bg-aligna-primary text-white font-body font-medium py-3 rounded-full"
+                        >
+                            Got it
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Icon attribution */}
             <div className="flex justify-center gap-3 my-4 opacity-30">
                 {['/assets/icons/Ajna.svg', '/assets/icons/Manipura.svg', '/assets/icons/Sahassara.svg'].map((icon, i) => (
@@ -190,6 +219,15 @@ const Settings = () => {
                 <LogOut size={16} />
                 {loggingOut ? 'Logging out...' : 'Sign Out'}
             </button>
+
+            {/* Legal footer */}
+            <div className="flex justify-center gap-3 mt-6 pb-2 flex-wrap">
+                <Link to="/contact" className="text-aligna-text-secondary font-body text-xs hover:text-aligna-text transition-colors">Contact Support</Link>
+                <span className="text-aligna-border">·</span>
+                <Link to="/terms" className="text-aligna-text-secondary font-body text-xs hover:text-aligna-text transition-colors">Terms</Link>
+                <span className="text-aligna-border">·</span>
+                <Link to="/privacy" className="text-aligna-text-secondary font-body text-xs hover:text-aligna-text transition-colors">Privacy</Link>
+            </div>
         </div>
     );
 };

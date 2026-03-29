@@ -1,16 +1,22 @@
 from fastapi import FastAPI, APIRouter, Request, HTTPException, Response, Depends
+from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import json
+import hmac
+import hashlib
+import base64
+import secrets
+from urllib.parse import urlencode
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -28,16 +34,58 @@ logger = logging.getLogger(__name__)
 PLAN_GOAL_LIMITS = {"free": 1, "pro": 3, "premium": 10}
 PLAN_PRICES = {"pro": 9.99, "premium": 19.99}
 SESSION_COUNTS = {"morning": 3, "midday": 6, "night": 9}
+LEMONSQUEEZY_API_BASE = "https://api.lemonsqueezy.com"
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+
+# Cookie security: production requires Secure + SameSite=None for cross-domain;
+# local HTTP dev requires Secure=False + SameSite=Lax (localhost is same-site).
+IS_PRODUCTION = os.environ.get("ENVIRONMENT", "development") == "production"
+COOKIE_SECURE = IS_PRODUCTION
+COOKIE_SAMESITE = "none" if IS_PRODUCTION else "lax"
+
+
+# --- Lemon Squeezy API Helper ---
+async def ls_request(method: str, path: str, **kwargs) -> dict:
+    api_key = os.environ.get("LEMONSQUEEZY_API_KEY", "")
+    if not api_key or api_key.startswith("your_"):
+        raise HTTPException(status_code=503, detail="Payments are not configured yet. Please contact support.")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/vnd.api+json",
+        "Content-Type": "application/vnd.api+json",
+    }
+    async with httpx.AsyncClient(timeout=30.0) as http:
+        resp = await http.request(
+            method,
+            f"{LEMONSQUEEZY_API_BASE}{path}",
+            headers=headers,
+            **kwargs
+        )
+        if not resp.is_success:
+            logger.error(f"Lemon Squeezy API error {resp.status_code}: {resp.text}")
+            raise HTTPException(status_code=502, detail="Payment provider error. Please try again.")
+        return resp.json()
 
 
 # --- Models ---
-class SessionExchange(BaseModel):
-    session_id: str
-
 class GoalCreate(BaseModel):
     title: str
     affirmation: str
     category: Optional[str] = "general"
+
+    model_config = {"str_strip_whitespace": True}
+
+    def model_post_init(self, __context):
+        if len(self.title) > 200:
+            raise ValueError("title must be 200 characters or fewer")
+        if len(self.affirmation) > 1000:
+            raise ValueError("affirmation must be 1000 characters or fewer")
+        if not self.title.strip():
+            raise ValueError("title cannot be blank")
+        if not self.affirmation.strip():
+            raise ValueError("affirmation cannot be blank")
 
 class GoalUpdate(BaseModel):
     title: Optional[str] = None
@@ -45,10 +93,19 @@ class GoalUpdate(BaseModel):
     category: Optional[str] = None
     is_active: Optional[bool] = None
 
+    model_config = {"str_strip_whitespace": True}
+
+    def model_post_init(self, __context):
+        if self.title is not None and len(self.title) > 200:
+            raise ValueError("title must be 200 characters or fewer")
+        if self.affirmation is not None and len(self.affirmation) > 1000:
+            raise ValueError("affirmation must be 1000 characters or fewer")
+
 class RitualEntryCreate(BaseModel):
     goal_id: str
     session_type: str
     writings: List[str]
+    local_date: Optional[str] = None  # Client sends YYYY-MM-DD in their local timezone
 
 class CheckoutRequest(BaseModel):
     plan: str
@@ -85,41 +142,104 @@ async def get_current_user(request: Request):
 
 
 # --- AUTH ROUTES ---
-@api_router.post("/auth/session")
-async def exchange_session(body: SessionExchange, response: Response):
+@api_router.get("/auth/google/login")
+async def google_login(response: Response):
+    """Return Google OAuth URL for the frontend to redirect to."""
+    client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
+    redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "")
+    if not client_id or not redirect_uri:
+        raise HTTPException(status_code=500, detail="Google OAuth not configured")
+
+    # CSRF protection: generate state, store in httponly cookie, verify in callback
+    state = secrets.token_urlsafe(16)
+    response.set_cookie(
+        key="oauth_state", value=state,
+        httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE,
+        max_age=600, path="/"
+    )
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "online",
+        "prompt": "select_account",
+        "state": state,
+    }
+    url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
+    return {"url": url}
+
+
+@api_router.get("/auth/google/callback")
+async def google_callback(request: Request, code: str = None, error: str = None, state: str = None):
+    """Handle Google OAuth callback, create session, redirect to frontend."""
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+
+    # Verify CSRF state token
+    expected_state = request.cookies.get("oauth_state")
+    if not expected_state or not state or not hmac.compare_digest(state, expected_state):
+        logger.warning("OAuth state mismatch — possible CSRF attempt")
+        return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
+
+    if error or not code:
+        return RedirectResponse(url=f"{frontend_url}/login?error=auth_cancelled")
+
+    # Exchange authorization code for tokens
     async with httpx.AsyncClient() as http:
-        resp = await http.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": body.session_id}
+        token_resp = await http.post(GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            "redirect_uri": os.environ.get("GOOGLE_REDIRECT_URI", ""),
+            "grant_type": "authorization_code",
+        })
+        if token_resp.status_code != 200:
+            logger.error(f"Google token exchange failed: {token_resp.text}")
+            return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
+
+        access_token = token_resp.json().get("access_token")
+
+        # Fetch user profile
+        user_resp = await http.get(
+            GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"}
         )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Invalid session ID")
-        data = resp.json()
+        if user_resp.status_code != 200:
+            return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
 
-    email = data["email"]
+        google_user = user_resp.json()
+
+    email = google_user.get("email")
+    if not email:
+        return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
+
+    # Create or update user record
     user_doc = await db.users.find_one({"email": email}, {"_id": 0})
-
     if not user_doc:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         user_doc = {
             "user_id": user_id,
             "email": email,
-            "name": data.get("name", ""),
-            "picture": data.get("picture", ""),
+            "name": google_user.get("name", ""),
+            "picture": google_user.get("picture", ""),
             "plan": "free",
             "subscription_status": "inactive",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(dict(user_doc))
     else:
-        # Update name/picture if changed
         await db.users.update_one(
             {"email": email},
-            {"$set": {"name": data.get("name", user_doc.get("name", "")),
-                      "picture": data.get("picture", user_doc.get("picture", ""))}}
+            {"$set": {
+                "name": google_user.get("name", user_doc.get("name", "")),
+                "picture": google_user.get("picture", user_doc.get("picture", ""))
+            }}
         )
+        user_doc = await db.users.find_one({"email": email}, {"_id": 0})
 
-    session_token = data["session_token"]
+    # Create session token
+    session_token = secrets.token_urlsafe(32)
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
 
     await db.user_sessions.delete_many({"user_id": user_doc["user_id"]})
@@ -130,14 +250,14 @@ async def exchange_session(body: SessionExchange, response: Response):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    response.set_cookie(
+    # Set cookie and redirect to frontend
+    redirect = RedirectResponse(url=f"{frontend_url}/")
+    redirect.set_cookie(
         key="session_token", value=session_token,
-        httponly=True, secure=True, samesite="none", path="/",
+        httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, path="/",
         max_age=7 * 24 * 3600
     )
-
-    fresh = await db.users.find_one({"email": email}, {"_id": 0})
-    return {"user": fresh}
+    return redirect
 
 
 @api_router.get("/auth/me")
@@ -150,7 +270,7 @@ async def logout(request: Request, response: Response):
     token = request.cookies.get("session_token")
     if token:
         await db.user_sessions.delete_many({"session_token": token})
-    response.delete_cookie("session_token", path="/", samesite="none", secure=True)
+    response.delete_cookie("session_token", path="/", samesite=COOKIE_SAMESITE, secure=COOKIE_SECURE)
     return {"message": "Logged out"}
 
 
@@ -226,7 +346,19 @@ async def get_today_rituals(request: Request, user=Depends(get_current_user)):
 
 @api_router.post("/rituals/entry")
 async def create_ritual_entry(entry_data: RitualEntryCreate, user=Depends(get_current_user)):
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    utc_today = datetime.now(timezone.utc).date()
+    if entry_data.local_date:
+        try:
+            local_dt = datetime.strptime(entry_data.local_date, "%Y-%m-%d").date()
+            # Accept if within 1 calendar day of UTC (covers all real timezones)
+            if abs((local_dt - utc_today).days) <= 1:
+                today = entry_data.local_date
+            else:
+                today = utc_today.strftime("%Y-%m-%d")
+        except ValueError:
+            today = utc_today.strftime("%Y-%m-%d")
+    else:
+        today = utc_today.strftime("%Y-%m-%d")
 
     existing = await db.ritual_entries.find_one({
         "user_id": user["user_id"],
@@ -252,6 +384,11 @@ async def create_ritual_entry(entry_data: RitualEntryCreate, user=Depends(get_cu
             status_code=400,
             detail=f"Expected {expected} writings for {entry_data.session_type} session"
         )
+    for w in entry_data.writings:
+        if not w.strip():
+            raise HTTPException(status_code=400, detail="Writings cannot be blank")
+        if len(w) > 1000:
+            raise HTTPException(status_code=400, detail="Each writing must be 1000 characters or fewer")
 
     entry_id = f"entry_{uuid.uuid4().hex[:12]}"
     entry_doc = {
@@ -269,6 +406,7 @@ async def create_ritual_entry(entry_data: RitualEntryCreate, user=Depends(get_cu
 
 @api_router.get("/rituals/history")
 async def get_ritual_history(user=Depends(get_current_user), limit: int = 30):
+    limit = min(max(1, limit), 100)  # cap between 1 and 100
     entries = await db.ritual_entries.find(
         {"user_id": user["user_id"]}, {"_id": 0}
     ).sort("completed_at", -1).to_list(limit)
@@ -295,7 +433,6 @@ async def get_streak(user=Depends(get_current_user)):
         streak += 1
         current_date = current_date - timedelta(days=1)
 
-    # Calculate longest streak
     sorted_dates = sorted(dates_with_activity)
     longest = 0
     run = 0
@@ -343,101 +480,125 @@ async def get_subscription(user=Depends(get_current_user)):
 
 
 @api_router.post("/payments/checkout")
-async def create_checkout(body: CheckoutRequest, request: Request, user=Depends(get_current_user)):
+async def create_checkout(body: CheckoutRequest, user=Depends(get_current_user)):
     if body.plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
-    amount = float(PLAN_PRICES[body.plan])
-    stripe_key = os.environ.get("STRIPE_API_KEY")
-    host_url = str(request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_co = StripeCheckout(api_key=stripe_key, webhook_url=webhook_url)
+    variant_id = os.environ.get(f"LEMONSQUEEZY_VARIANT_ID_{body.plan.upper()}")
+    store_id = os.environ.get("LEMONSQUEEZY_STORE_ID")
+    if not variant_id or not store_id or variant_id.startswith("your_"):
+        raise HTTPException(status_code=500, detail=f"Payment not configured for {body.plan} plan")
 
-    success_url = f"{body.origin_url}/upgrade?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{body.origin_url}/upgrade"
+    # Redirect after payment: our own URL with plan query param so frontend knows which plan was bought
+    success_url = f"{body.origin_url}/upgrade?checkout=success&plan={body.plan}"
 
-    checkout_req = CheckoutSessionRequest(
-        amount=amount,
-        currency="usd",
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={"user_id": user["user_id"], "plan": body.plan, "email": user["email"]}
-    )
+    checkout_payload = {
+        "data": {
+            "type": "checkouts",
+            "attributes": {
+                "checkout_data": {
+                    "email": user["email"],
+                    "name": user.get("name", ""),
+                    "custom": {
+                        "user_id": user["user_id"],
+                        "plan": body.plan
+                    }
+                },
+                "product_options": {
+                    "redirect_url": success_url,
+                    "enabled_variants": [int(variant_id)]
+                },
+                "expires_at": None
+            },
+            "relationships": {
+                "store": {"data": {"type": "stores", "id": str(store_id)}},
+                "variant": {"data": {"type": "variants", "id": str(variant_id)}}
+            }
+        }
+    }
 
-    session = await stripe_co.create_checkout_session(checkout_req)
+    try:
+        checkout = await ls_request("POST", "/v1/checkouts", json=checkout_payload)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    checkout_id = checkout["data"]["id"]
+    checkout_url = checkout["data"]["attributes"]["url"]
 
     txn_doc = {
         "transaction_id": f"txn_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"],
-        "session_id": session.session_id,
-        "amount": amount,
+        "checkout_id": checkout_id,
+        "amount": float(PLAN_PRICES[body.plan]),
         "currency": "usd",
         "plan": body.plan,
         "payment_status": "pending",
-        "status": "open",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.payment_transactions.insert_one(txn_doc)
-    return {"url": session.url, "session_id": session.session_id}
+    return {"url": checkout_url, "checkout_id": checkout_id}
 
 
-@api_router.get("/payments/status/{session_id}")
-async def get_payment_status(session_id: str, request: Request, user=Depends(get_current_user)):
+@api_router.get("/payments/status/{checkout_id}")
+async def get_payment_status(checkout_id: str, user=Depends(get_current_user)):
+    """Returns the stored transaction record. Plan upgrade is handled by webhook."""
     txn = await db.payment_transactions.find_one(
-        {"session_id": session_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"checkout_id": checkout_id, "user_id": user["user_id"]}, {"_id": 0}
     )
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
-
-    if txn.get("payment_status") == "paid":
-        return txn
-
-    stripe_key = os.environ.get("STRIPE_API_KEY")
-    host_url = str(request.base_url)
-    webhook_url = f"{host_url}api/webhook/stripe"
-    stripe_co = StripeCheckout(api_key=stripe_key, webhook_url=webhook_url)
-
-    status = await stripe_co.get_checkout_status(session_id)
-    update_data = {"status": status.status, "payment_status": status.payment_status}
-
-    if status.payment_status == "paid":
-        plan = txn.get("plan", "pro")
-        await db.users.update_one(
-            {"user_id": user["user_id"]},
-            {"$set": {"plan": plan, "subscription_status": "active"}}
-        )
-
-    await db.payment_transactions.update_one({"session_id": session_id}, {"$set": update_data})
-    return await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    return txn
 
 
-@api_router.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    body = await request.body()
-    signature = request.headers.get("Stripe-Signature", "")
+@api_router.post("/webhook/lemonsqueezy")
+async def lemonsqueezy_webhook(request: Request):
+    """Lemon Squeezy sends this when a payment is confirmed. Updates user plan."""
+    payload = await request.body()
+    webhook_secret = os.environ.get("LEMONSQUEEZY_WEBHOOK_SECRET", "")
+
+    # Verify signature (HMAC-SHA256 of raw body with secret)
+    if webhook_secret and not webhook_secret.startswith("your_"):
+        signature = request.headers.get("X-Signature", "")
+        expected = hmac.new(
+            webhook_secret.encode(), payload, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            logger.warning("Lemon Squeezy webhook: invalid signature")
+            raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
     try:
-        stripe_key = os.environ.get("STRIPE_API_KEY")
-        host_url = str(request.base_url)
-        webhook_url = f"{host_url}api/webhook/stripe"
-        stripe_co = StripeCheckout(api_key=stripe_key, webhook_url=webhook_url)
-        webhook_response = await stripe_co.handle_webhook(body, signature)
+        event = json.loads(payload)
+        event_name = event.get("meta", {}).get("event_name", "")
 
-        if webhook_response.payment_status == "paid":
-            txn = await db.payment_transactions.find_one(
-                {"session_id": webhook_response.session_id}, {"_id": 0}
-            )
-            if txn and txn.get("payment_status") != "paid":
-                plan = txn.get("plan", "pro")
+        # Both one-time orders and subscriptions trigger plan upgrade
+        if event_name in ("order_created", "subscription_created"):
+            custom_data = event.get("meta", {}).get("custom_data", {})
+            user_id = custom_data.get("user_id")
+            plan = custom_data.get("plan", "pro")
+
+            if user_id and plan in PLAN_GOAL_LIMITS:
                 await db.users.update_one(
-                    {"user_id": txn["user_id"]},
+                    {"user_id": user_id},
                     {"$set": {"plan": plan, "subscription_status": "active"}}
                 )
-                await db.payment_transactions.update_one(
-                    {"session_id": webhook_response.session_id},
-                    {"$set": {"payment_status": "paid", "status": "complete"}}
+                # Mark the most recent pending transaction as paid
+                txn = await db.payment_transactions.find_one(
+                    {"user_id": user_id, "payment_status": "pending"},
+                    sort=[("created_at", -1)]
                 )
+                if txn:
+                    order_id = str(event.get("data", {}).get("id", ""))
+                    await db.payment_transactions.update_one(
+                        {"_id": txn["_id"]},
+                        {"$set": {"payment_status": "paid", "order_id": order_id}}
+                    )
+                logger.info(f"Plan upgraded: user={user_id} plan={plan}")
+
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
+        logger.error(f"Lemon Squeezy webhook error: {e}")
+
     return {"received": True}
 
 
@@ -447,12 +608,20 @@ async def root():
 
 
 app.include_router(api_router)
+_cors_origins_raw = os.environ.get('CORS_ORIGINS', '').strip()
+_cors_origins = [o.strip() for o in _cors_origins_raw.split(',') if o.strip()] if _cors_origins_raw else []
+if not _cors_origins:
+    # Fallback: use FRONTEND_URL if CORS_ORIGINS is not set
+    _frontend = os.environ.get('FRONTEND_URL', '').strip()
+    if _frontend:
+        _cors_origins = [_frontend]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 
