@@ -1,0 +1,42 @@
+# Render Blueprint — deploys the Aligna FastAPI backend as a Web Service.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: aligna-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      # Fill these in the Render dashboard after first deploy
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: WAITLIST_ADMIN_KEY
+        sync: false
+      - key: LEMONSQUEEZY_API_KEY
+        sync: false
+      - key: LEMONSQUEEZY_STORE_ID
+        sync: false
+      - key: LEMONSQUEEZY_WEBHOOK_SECRET
+        sync: false
+      - key: LEMONSQUEEZY_VARIANT_ID_PRO
+        sync: false
+      - key: LEMONSQUEEZY_VARIANT_ID_PREMIUM
+        sync: false
