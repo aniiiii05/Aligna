@@ -3,31 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Flame, ChevronRight, Bell } from 'lucide-react';
+import { getTechniqueById } from '../constants/techniques';
 
 const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
-const SESSION_INFO = {
-    morning: { label: 'Morning', count: 3, icon: '/assets/icons/Candle.svg', time: 'Before noon', color: 'from-amber-50 to-orange-50', border: 'border-amber-200/70', activeColor: 'bg-aligna-primary/10 border-aligna-primary/30' },
-    midday:  { label: 'Midday',  count: 6, icon: '/assets/icons/Water.svg', time: '12pm – 6pm', color: 'from-sky-50 to-teal-50', border: 'border-sky-200/70', activeColor: 'bg-aligna-primary/10 border-aligna-primary/30' },
-    night:   { label: 'Evening', count: 9, icon: '/assets/icons/Singing Bowl.svg', time: 'After 6pm', color: 'from-indigo-50 to-violet-50', border: 'border-indigo-200/70', activeColor: 'bg-aligna-primary/10 border-aligna-primary/30' },
-};
-
 const CATEGORY_ICONS = {
-    general: '/assets/icons/Lotus.svg',
+    general:   '/assets/icons/Lotus.svg',
     abundance: '/assets/icons/Manipura.svg',
-    health: '/assets/icons/Yoga.svg',
-    love: '/assets/icons/Hamsa.svg',
-    clarity: '/assets/icons/Ajna.svg',
-    peace: '/assets/icons/Equanimity.svg',
+    health:    '/assets/icons/Yoga.svg',
+    love:      '/assets/icons/Hamsa.svg',
+    clarity:   '/assets/icons/Ajna.svg',
+    peace:     '/assets/icons/Equanimity.svg',
 };
 
 const Home = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [goals, setGoals] = useState([]);
+    const [goals, setGoals]           = useState([]);
     const [todayEntries, setTodayEntries] = useState([]);
-    const [streak, setStreak] = useState({ streak: 0, longest_streak: 0, total_days: 0 });
-    const [loading, setLoading] = useState(true);
+    const [streak, setStreak]         = useState({ streak: 0, longest_streak: 0, total_days: 0 });
+    const [loading, setLoading]       = useState(true);
     const [notifStatus, setNotifStatus] = useState(Notification?.permission || 'default');
 
     const getGreeting = () => {
@@ -72,10 +67,22 @@ const Home = () => {
         }
     };
 
-    const completedSessions = todayEntries.map(e => e.session_type);
-    const allDone = completedSessions.length === 3;
-    const featuredGoal = goals[0];
-    const nextSession = ['morning', 'midday', 'night'].find(s => !completedSessions.includes(s));
+    const featuredGoal  = goals[0];
+    const technique     = getTechniqueById(featuredGoal?.technique_id);
+    const goalSessions  = technique?.sessions || [];
+
+    // Completed sessions for the featured goal specifically
+    const goalCompletedSessions = todayEntries
+        .filter(e => e.goal_id === featuredGoal?.goal_id)
+        .map(e => e.session_type);
+
+    const allDone    = goalSessions.length > 0 && goalSessions.every(s => goalCompletedSessions.includes(s.id));
+    const nextSession = goalSessions.find(s => !goalCompletedSessions.includes(s.id));
+
+    // Dynamic grid columns based on number of sessions
+    const gridCols = goalSessions.length === 1 ? 'grid-cols-1'
+                   : goalSessions.length === 2 ? 'grid-cols-2'
+                   : 'grid-cols-3';
 
     if (loading) {
         return (
@@ -101,17 +108,15 @@ const Home = () => {
                             <span className="text-aligna-primary">{user?.name?.split(' ')[0] || 'friend'}</span>
                         </h1>
                     </div>
-                    {user?.picture ? (
-                        <img
-                            src={user.picture}
-                            alt={user.name}
-                            className="w-12 h-12 rounded-full border-2 border-aligna-border shadow-sm"
-                        />
-                    ) : (
-                        <div className="w-12 h-12 rounded-full bg-aligna-primary/20 flex items-center justify-center border border-aligna-border">
-                            <span className="font-heading text-xl text-aligna-primary">{(user?.name || 'U')[0]}</span>
-                        </div>
-                    )}
+                    <button onClick={() => navigate('/settings')} className="rounded-full border-2 border-aligna-border shadow-sm overflow-hidden hover:border-aligna-primary/40 transition-colors">
+                        {user?.picture ? (
+                            <img src={user.picture} alt={user.name} className="w-12 h-12 object-cover" />
+                        ) : (
+                            <div className="w-12 h-12 bg-aligna-primary/20 flex items-center justify-center">
+                                <span className="font-heading text-xl text-aligna-primary">{(user?.name || 'U')[0]}</span>
+                            </div>
+                        )}
+                    </button>
                 </div>
             </div>
 
@@ -177,15 +182,23 @@ const Home = () => {
                     />
                     <h2 className="font-heading text-2xl text-aligna-text mb-2">Set your first intention</h2>
                     <p className="text-aligna-text-secondary font-body text-sm mb-7 max-w-[260px] mx-auto leading-relaxed">
-                        Create a manifestation goal to begin your 3-6-9 ritual journey
+                        Choose a manifestation technique and begin your daily ritual journey
                     </p>
-                    <button
-                        data-testid="create-first-goal-btn"
-                        onClick={() => navigate('/goals')}
-                        className="bg-aligna-primary text-white font-body font-medium py-3.5 px-10 rounded-full hover:bg-aligna-primary-hover transition-all duration-300 hover:-translate-y-0.5"
-                    >
-                        Create a Goal
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button
+                            data-testid="create-first-goal-btn"
+                            onClick={() => navigate('/goals')}
+                            className="bg-aligna-primary text-white font-body font-medium py-3.5 px-8 rounded-full hover:bg-aligna-primary-hover transition-all duration-300 hover:-translate-y-0.5"
+                        >
+                            Create a Goal
+                        </button>
+                        <button
+                            onClick={() => navigate('/explore')}
+                            className="border border-aligna-border text-aligna-text-secondary font-body text-sm py-3.5 px-6 rounded-full hover:border-aligna-primary/40 hover:text-aligna-text transition-all duration-300"
+                        >
+                            Explore Techniques
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <>
@@ -204,39 +217,44 @@ const Home = () => {
                             <p className="text-aligna-text-secondary text-xs font-body tracking-[0.15em] uppercase">Today's Intention</p>
                         </div>
                         <h3 className="font-heading text-xl text-aligna-text mb-1.5 leading-snug">{featuredGoal?.title}</h3>
-                        <p className="text-aligna-text-secondary font-body text-sm italic leading-relaxed line-clamp-2 opacity-80">
+                        <p className="text-aligna-text-secondary font-body text-sm italic leading-relaxed line-clamp-2 opacity-80 mb-3">
                             "{featuredGoal?.affirmation}"
                         </p>
+                        {/* Technique badge */}
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r ${technique?.color.card} border ${technique?.color.border}`}>
+                            <img src={technique?.icon} alt={technique?.name} className="w-3.5 h-3.5 opacity-70" />
+                            <span className="font-body text-[11px] text-aligna-text-secondary">{technique?.name}</span>
+                        </div>
                         {goals.length > 1 && (
                             <p className="text-aligna-text-secondary text-xs font-body mt-2 opacity-60">+{goals.length - 1} more intention{goals.length > 2 ? 's' : ''}</p>
                         )}
                     </div>
 
-                    {/* Today's Sessions */}
+                    {/* Today's Sessions — dynamic per technique */}
                     <div className="mb-5 animate-float-up" style={{ animationDelay: '0.15s' }}>
-                        <p className="text-aligna-text-secondary text-xs font-body tracking-[0.15em] uppercase mb-3">Today's Rituals</p>
-                        <div className="grid grid-cols-3 gap-3">
-                            {Object.entries(SESSION_INFO).map(([key, info]) => {
-                                const done = completedSessions.includes(key);
+                        <p className="text-aligna-text-secondary text-xs font-body tracking-[0.15em] uppercase mb-3">Today's Sessions</p>
+                        <div className={`grid ${gridCols} gap-3`}>
+                            {goalSessions.map(sess => {
+                                const done = goalCompletedSessions.includes(sess.id);
                                 return (
                                     <button
-                                        key={key}
-                                        data-testid={`session-card-${key}`}
-                                        onClick={() => !done && navigate('/ritual', { state: { session: key, goalId: featuredGoal?.goal_id } })}
+                                        key={sess.id}
+                                        data-testid={`session-card-${sess.id}`}
+                                        onClick={() => !done && navigate('/ritual', { state: { session: sess.id, goalId: featuredGoal?.goal_id } })}
                                         disabled={done}
                                         className={`flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border transition-all duration-300 ${
                                             done
                                                 ? 'bg-aligna-primary/10 border-aligna-primary/30 cursor-default'
-                                                : `bg-gradient-to-br ${info.color} ${info.border} hover:-translate-y-0.5 active:scale-95`
+                                                : `bg-gradient-to-br ${technique?.color.card} ${technique?.color.border} hover:-translate-y-0.5 active:scale-95`
                                         }`}
                                     >
-                                        <img src={info.icon} alt={info.label} className={`w-8 h-8 ${done ? 'opacity-50' : 'opacity-90'}`} />
+                                        <img src={sess.icon} alt={sess.label} className={`w-8 h-8 ${done ? 'opacity-50' : 'opacity-90'}`} />
                                         <div className="text-center">
-                                            <p className={`text-xs font-body font-medium ${done ? 'text-aligna-primary' : 'text-aligna-text'}`}>
-                                                {info.label}
+                                            <p className={`text-xs font-body font-medium leading-tight ${done ? 'text-aligna-primary' : 'text-aligna-text'}`}>
+                                                {sess.label.split(' ')[0]}
                                             </p>
                                             <p className={`text-xs font-body ${done ? 'text-aligna-primary/60' : 'text-aligna-text-secondary'}`}>
-                                                {done ? '✓ Done' : `${info.count}×`}
+                                                {done ? '✓ Done' : sess.type === 'freeform' ? '✍' : `${sess.count}×`}
                                             </p>
                                         </div>
                                     </button>
@@ -249,11 +267,11 @@ const Home = () => {
                     {!allDone ? (
                         <button
                             data-testid="start-ritual-btn"
-                            onClick={() => navigate('/ritual', { state: { session: nextSession, goalId: featuredGoal?.goal_id } })}
+                            onClick={() => navigate('/ritual', { state: { session: nextSession?.id, goalId: featuredGoal?.goal_id } })}
                             className="w-full flex items-center justify-center gap-2 bg-aligna-primary text-white font-body font-medium py-4 rounded-full hover:bg-aligna-primary-hover transition-all duration-300 hover:-translate-y-0.5 animate-float-up shadow-sm"
                             style={{ animationDelay: '0.2s' }}
                         >
-                            Begin {SESSION_INFO[nextSession]?.label} Ritual
+                            Begin {nextSession?.label}
                             <ChevronRight size={18} />
                         </button>
                     ) : (
@@ -264,7 +282,9 @@ const Home = () => {
                         >
                             <img src="/assets/icons/Yin Yang.svg" alt="" className="w-8 h-8 mx-auto mb-2 opacity-60" />
                             <p className="font-heading text-xl text-aligna-success">You are aligned for today</p>
-                            <p className="text-aligna-text-secondary text-sm font-body mt-1">All 3 rituals complete</p>
+                            <p className="text-aligna-text-secondary text-sm font-body mt-1">
+                                All {goalSessions.length} session{goalSessions.length !== 1 ? 's' : ''} complete
+                            </p>
                         </div>
                     )}
                 </>

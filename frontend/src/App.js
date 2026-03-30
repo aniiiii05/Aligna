@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
+import Explore from './pages/Explore';
 import Waitlist from './pages/Waitlist';
 import WaitlistAdmin from './pages/WaitlistAdmin';
 import NotFound from './pages/NotFound';
@@ -52,6 +53,7 @@ function App() {
                                 }
                             >
                                 <Route index element={<Home />} />
+                                <Route path="explore" element={<Explore />} />
                                 <Route path="goals" element={<Goals />} />
                                 <Route path="ritual" element={<Ritual />} />
                                 <Route path="progress" element={<Progress />} />

@@ -1,27 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Trash2, Edit2, X, Check, Lock } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Check, Lock, Compass } from 'lucide-react';
+import { TECHNIQUES, getTechniqueById, DIFFICULTY_COLORS } from '../constants/techniques';
 
 const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
 const PLAN_LIMITS = { free: 1, pro: 3, premium: 10 };
 const CATEGORIES = [
-    { id: 'general', label: 'General', icon: '/assets/icons/Lotus.svg' },
+    { id: 'general',   label: 'General',   icon: '/assets/icons/Lotus.svg' },
     { id: 'abundance', label: 'Abundance', icon: '/assets/icons/Manipura.svg' },
-    { id: 'health', label: 'Health', icon: '/assets/icons/Yoga.svg' },
-    { id: 'love', label: 'Love', icon: '/assets/icons/Hamsa.svg' },
-    { id: 'clarity', label: 'Clarity', icon: '/assets/icons/Ajna.svg' },
-    { id: 'peace', label: 'Peace', icon: '/assets/icons/Equanimity.svg' },
+    { id: 'health',    label: 'Health',    icon: '/assets/icons/Yoga.svg' },
+    { id: 'love',      label: 'Love',      icon: '/assets/icons/Hamsa.svg' },
+    { id: 'clarity',   label: 'Clarity',   icon: '/assets/icons/Ajna.svg' },
+    { id: 'peace',     label: 'Peace',     icon: '/assets/icons/Equanimity.svg' },
 ];
 
-const GoalModal = ({ goal, onSave, onClose }) => {
-    const [title, setTitle] = useState(goal?.title || '');
+const GoalModal = ({ goal, defaultTechniqueId, onSave, onClose }) => {
+    const navigate = useNavigate();
+    const [title, setTitle]           = useState(goal?.title || '');
     const [affirmation, setAffirmation] = useState(goal?.affirmation || '');
-    const [category, setCategory] = useState(goal?.category || 'general');
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState('');
+    const [category, setCategory]     = useState(goal?.category || 'general');
+    const [techniqueId, setTechniqueId] = useState(goal?.technique_id || defaultTechniqueId || '369');
+    const [saving, setSaving]         = useState(false);
+    const [error, setError]           = useState('');
+
+    const selectedTechnique = getTechniqueById(techniqueId);
 
     const handleSave = async () => {
         if (!title.trim() || !affirmation.trim()) {
@@ -31,7 +36,7 @@ const GoalModal = ({ goal, onSave, onClose }) => {
         setSaving(true);
         setError('');
         try {
-            await onSave({ title: title.trim(), affirmation: affirmation.trim(), category });
+            await onSave({ title: title.trim(), affirmation: affirmation.trim(), category, technique_id: techniqueId });
             onClose();
         } catch (err) {
             setError(err.response?.data?.detail || 'Failed to save goal');
@@ -43,15 +48,18 @@ const GoalModal = ({ goal, onSave, onClose }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" data-testid="goal-modal">
             <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative z-10 w-full max-w-lg bg-aligna-surface rounded-t-3xl md:rounded-3xl p-6 shadow-xl animate-float-up">
-                <div className="flex items-center justify-between mb-6">
+            <div className="relative z-10 w-full max-w-lg bg-aligna-surface rounded-t-3xl md:rounded-3xl shadow-xl animate-float-up max-h-[90vh] flex flex-col">
+                {/* Modal header */}
+                <div className="flex items-center justify-between p-6 pb-4 shrink-0">
                     <h2 className="font-heading text-2xl text-aligna-text">{goal ? 'Edit Goal' : 'New Intention'}</h2>
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-aligna-surface-secondary transition-colors">
                         <X size={18} className="text-aligna-text-secondary" />
                     </button>
                 </div>
 
-                <div className="space-y-4">
+                {/* Scrollable content */}
+                <div className="overflow-y-auto flex-1 px-6 pb-6 space-y-5">
+                    {/* Goal Title */}
                     <div>
                         <label className="block text-xs font-body text-aligna-text-secondary tracking-[0.15em] uppercase mb-2">Goal Title</label>
                         <input
@@ -63,6 +71,7 @@ const GoalModal = ({ goal, onSave, onClose }) => {
                         />
                     </div>
 
+                    {/* Affirmation */}
                     <div>
                         <label className="block text-xs font-body text-aligna-text-secondary tracking-[0.15em] uppercase mb-2">Affirmation</label>
                         <textarea
@@ -76,6 +85,7 @@ const GoalModal = ({ goal, onSave, onClose }) => {
                         <p className="text-aligna-text-secondary text-xs mt-1 font-body">Write in present tense, as if it's already true</p>
                     </div>
 
+                    {/* Category */}
                     <div>
                         <label className="block text-xs font-body text-aligna-text-secondary tracking-[0.15em] uppercase mb-2">Category</label>
                         <div className="flex flex-wrap gap-2">
@@ -92,6 +102,53 @@ const GoalModal = ({ goal, onSave, onClose }) => {
                                 >
                                     <img src={cat.icon} alt={cat.label} className="w-3.5 h-3.5" />
                                     {cat.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Technique */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-body text-aligna-text-secondary tracking-[0.15em] uppercase">Technique</label>
+                            <button
+                                onClick={() => { onClose(); navigate('/explore'); }}
+                                className="flex items-center gap-1 text-xs font-body text-aligna-primary hover:underline"
+                            >
+                                <Compass size={12} /> Explore all
+                            </button>
+                        </div>
+
+                        {/* Selected technique preview */}
+                        <div className={`flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br ${selectedTechnique.color.card} border ${selectedTechnique.color.border} mb-2`}>
+                            <img src={selectedTechnique.icon} alt={selectedTechnique.name} className="w-8 h-8 opacity-80" />
+                            <div className="flex-1 min-w-0">
+                                <p className="font-body text-sm font-medium text-aligna-text">{selectedTechnique.name}</p>
+                                <p className="font-body text-xs text-aligna-text-secondary italic truncate">{selectedTechnique.tagline}</p>
+                            </div>
+                            <span className={`text-[10px] font-body font-medium px-2 py-0.5 rounded-full shrink-0 ${DIFFICULTY_COLORS[selectedTechnique.difficulty]}`}>
+                                {selectedTechnique.difficulty}
+                            </span>
+                        </div>
+
+                        {/* Scrollable technique list */}
+                        <div className="space-y-1.5 max-h-52 overflow-y-auto pr-0.5">
+                            {TECHNIQUES.map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setTechniqueId(t.id)}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all duration-200 ${
+                                        techniqueId === t.id
+                                            ? 'border-aligna-primary bg-aligna-primary/5'
+                                            : 'border-aligna-border bg-aligna-surface hover:border-aligna-primary/30'
+                                    }`}
+                                >
+                                    <img src={t.icon} alt={t.name} className="w-6 h-6 opacity-70 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-body text-sm text-aligna-text leading-tight">{t.name}</p>
+                                        <p className="font-body text-[11px] text-aligna-text-secondary truncate">{t.duration} · {t.sessions.length}×/day</p>
+                                    </div>
+                                    {techniqueId === t.id && <Check size={15} className="text-aligna-primary shrink-0" />}
                                 </button>
                             ))}
                         </div>
@@ -118,17 +175,25 @@ const GoalModal = ({ goal, onSave, onClose }) => {
 const Goals = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [goals, setGoals] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [editGoal, setEditGoal] = useState(null);
-    const [deleting, setDeleting] = useState(null);
-    const [confirmDelete, setConfirmDelete] = useState(null); // goalId pending confirmation
+    const location = useLocation();
+    const [goals, setGoals]             = useState([]);
+    const [loading, setLoading]         = useState(true);
+    const [showModal, setShowModal]     = useState(false);
+    const [editGoal, setEditGoal]       = useState(null);
+    const [deleting, setDeleting]       = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState(null);
+
+    // Pre-select technique if navigated from Explore
+    const defaultTechniqueId = location.state?.techniqueId || '369';
 
     const limit = PLAN_LIMITS[user?.plan] || 1;
     const atLimit = goals.length >= limit;
 
     useEffect(() => {
+        // Auto-open modal when coming from Explore with a technique
+        if (location.state?.techniqueId) {
+            setShowModal(true);
+        }
         fetchGoals();
     }, []);
 
@@ -212,20 +277,29 @@ const Goals = () => {
                     <img src="/assets/illustrations/mental health problems-02.svg" alt="Empty" className="w-36 h-36 mx-auto mb-6 opacity-60" />
                     <h2 className="font-heading text-2xl text-aligna-text mb-2">No intentions yet</h2>
                     <p className="text-aligna-text-secondary font-body text-sm mb-6 max-w-xs mx-auto leading-relaxed">
-                        Create your first manifestation goal and begin your 3-6-9 ritual journey
+                        Choose your manifestation technique and set your first intention
                     </p>
-                    <button
-                        data-testid="create-goal-empty-btn"
-                        onClick={() => setShowModal(true)}
-                        className="bg-aligna-primary text-white font-body font-medium py-3 px-8 rounded-full hover:bg-aligna-primary-hover transition-all duration-300"
-                    >
-                        Set Your Intention
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button
+                            data-testid="create-goal-empty-btn"
+                            onClick={() => setShowModal(true)}
+                            className="bg-aligna-primary text-white font-body font-medium py-3 px-8 rounded-full hover:bg-aligna-primary-hover transition-all duration-300"
+                        >
+                            Set Your Intention
+                        </button>
+                        <button
+                            onClick={() => navigate('/explore')}
+                            className="flex items-center justify-center gap-2 border border-aligna-border text-aligna-text-secondary font-body text-sm py-3 px-6 rounded-full hover:border-aligna-primary/40 hover:text-aligna-text transition-all duration-300"
+                        >
+                            <Compass size={15} /> Explore Techniques
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <div className="space-y-4">
                     {goals.map((goal, i) => {
-                        const catInfo = getCategoryInfo(goal.category);
+                        const catInfo   = getCategoryInfo(goal.category);
+                        const technique = getTechniqueById(goal.technique_id);
                         return (
                             <div
                                 key={goal.goal_id}
@@ -238,7 +312,7 @@ const Goals = () => {
                                         <img src={catInfo.icon} alt={catInfo.label} className="w-6 h-6" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                                             <h3 className="font-heading text-xl text-aligna-text leading-tight">{goal.title}</h3>
                                             <span className="text-[10px] font-body text-aligna-text-secondary bg-aligna-surface-secondary px-2 py-0.5 rounded-full capitalize">{goal.category}</span>
                                         </div>
@@ -283,16 +357,17 @@ const Goals = () => {
                                     </div>
                                 </div>
 
-                                <div className="mt-4 pt-3 border-t border-aligna-border flex items-center justify-between">
-                                    <div className="flex gap-2">
-                                        {['morning', 'midday', 'night'].map(s => (
-                                            <span key={s} className="text-[10px] font-body text-aligna-text-secondary bg-aligna-surface-secondary px-2 py-0.5 rounded-full capitalize">{s}</span>
-                                        ))}
+                                <div className="mt-4 pt-3 border-t border-aligna-border flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <img src={technique.icon} alt={technique.name} className="w-4 h-4 opacity-50 shrink-0" />
+                                        <span className="text-[11px] font-body text-aligna-text-secondary truncate">{technique.name}</span>
+                                        <span className="text-aligna-border shrink-0">·</span>
+                                        <span className="text-[11px] font-body text-aligna-text-secondary shrink-0">{technique.sessions.length}×/day</span>
                                     </div>
                                     <button
                                         data-testid={`start-ritual-${goal.goal_id}`}
                                         onClick={() => navigate('/ritual', { state: { goalId: goal.goal_id } })}
-                                        className="text-xs font-body text-aligna-primary font-medium hover:underline"
+                                        className="text-xs font-body text-aligna-primary font-medium hover:underline shrink-0"
                                     >
                                         Start ritual →
                                     </button>
@@ -326,6 +401,7 @@ const Goals = () => {
             {showModal && (
                 <GoalModal
                     goal={editGoal}
+                    defaultTechniqueId={editGoal ? undefined : defaultTechniqueId}
                     onSave={handleSave}
                     onClose={() => { setShowModal(false); setEditGoal(null); }}
                 />

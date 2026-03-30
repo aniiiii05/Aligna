@@ -34,7 +34,21 @@ logger = logging.getLogger(__name__)
 
 PLAN_GOAL_LIMITS = {"free": 1, "pro": 3, "premium": 10}
 PLAN_PRICES = {"pro": 9.99, "premium": 19.99}
-SESSION_COUNTS = {"morning": 3, "midday": 6, "night": 9}
+SESSION_COUNTS = {"morning": 3, "midday": 6, "night": 9}  # legacy fallback
+
+# All supported techniques: technique_id → {session_id → expected_writings_count}
+TECHNIQUE_SESSIONS = {
+    "369":                  {"morning": 3, "midday": 6, "night": 9},
+    "55x5":                 {"daily": 55},
+    "scripting":            {"daily": 1},
+    "gratitude":            {"morning": 5, "night": 5},
+    "visualization":        {"daily": 1},
+    "two-cup":              {"from": 1, "to": 1},
+    "pillow":               {"night": 3},
+    "mirror-work":          {"morning": 5, "midday": 5, "night": 5},
+    "future-self":          {"daily": 1},
+    "affirmation-stacking": {"morning": 5, "night": 5},
+}
 LEMONSQUEEZY_API_BASE = "https://api.lemonsqueezy.com"
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -75,6 +89,7 @@ class GoalCreate(BaseModel):
     title: str
     affirmation: str
     category: Optional[str] = "general"
+    technique_id: Optional[str] = "369"
 
     model_config = {"str_strip_whitespace": True}
 
@@ -87,11 +102,14 @@ class GoalCreate(BaseModel):
             raise ValueError("title cannot be blank")
         if not self.affirmation.strip():
             raise ValueError("affirmation cannot be blank")
+        if self.technique_id and self.technique_id not in TECHNIQUE_SESSIONS:
+            raise ValueError(f"Unknown technique: {self.technique_id}")
 
 class GoalUpdate(BaseModel):
     title: Optional[str] = None
     affirmation: Optional[str] = None
     category: Optional[str] = None
+    technique_id: Optional[str] = None
     is_active: Optional[bool] = None
 
     model_config = {"str_strip_whitespace": True}
@@ -101,6 +119,8 @@ class GoalUpdate(BaseModel):
             raise ValueError("title must be 200 characters or fewer")
         if self.affirmation is not None and len(self.affirmation) > 1000:
             raise ValueError("affirmation must be 1000 characters or fewer")
+        if self.technique_id is not None and self.technique_id not in TECHNIQUE_SESSIONS:
+            raise ValueError(f"Unknown technique: {self.technique_id}")
 
 class RitualEntryCreate(BaseModel):
     goal_id: str
@@ -316,6 +336,7 @@ async def create_goal(goal_data: GoalCreate, user=Depends(get_current_user)):
         "title": goal_data.title,
         "affirmation": goal_data.affirmation,
         "category": goal_data.category or "general",
+        "technique_id": goal_data.technique_id or "369",
         "is_active": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -392,13 +413,19 @@ async def create_ritual_entry(entry_data: RitualEntryCreate, user=Depends(get_cu
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
 
-    if entry_data.session_type not in SESSION_COUNTS:
-        raise HTTPException(status_code=400, detail="session_type must be morning, midday, or night")
-    expected = SESSION_COUNTS[entry_data.session_type]
+    # Validate session_type and writings count against the goal's technique
+    technique_id = goal.get("technique_id", "369") or "369"
+    valid_sessions = TECHNIQUE_SESSIONS.get(technique_id, SESSION_COUNTS)
+    if entry_data.session_type not in valid_sessions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid session '{entry_data.session_type}' for technique '{technique_id}'"
+        )
+    expected = valid_sessions[entry_data.session_type]
     if len(entry_data.writings) != expected:
         raise HTTPException(
             status_code=400,
-            detail=f"Expected {expected} writings for {entry_data.session_type} session"
+            detail=f"Expected {expected} writings for '{entry_data.session_type}' session"
         )
     for w in entry_data.writings:
         if not w.strip():

@@ -2,12 +2,23 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 
-const navItems = [
-    { path: '/', label: 'Home', icon: '/assets/icons/House.svg', lucide: null, exact: true },
-    { path: '/goals', label: 'Goals', icon: '/assets/icons/Lotus.svg', lucide: null },
-    { path: '/ritual', label: 'Ritual', icon: '/assets/icons/Mindfulness.svg', lucide: null },
-    { path: '/progress', label: 'Progress', icon: '/assets/icons/Calendar.svg', lucide: null },
-    { path: '/settings', label: 'Settings', icon: null, lucide: Settings },
+// Mobile bottom nav (5 items — most-used)
+const mobileNavItems = [
+    { path: '/',        label: 'Home',    icon: '/assets/icons/House.svg',      lucide: null, exact: true },
+    { path: '/explore', label: 'Explore', icon: '/assets/icons/Ajna.svg',       lucide: null },
+    { path: '/ritual',  label: 'Ritual',  icon: '/assets/icons/Mindfulness.svg',lucide: null },
+    { path: '/goals',   label: 'Goals',   icon: '/assets/icons/Lotus.svg',      lucide: null },
+    { path: '/progress',label: 'Progress',icon: '/assets/icons/Calendar.svg',   lucide: null },
+];
+
+// Desktop top nav (all items including Settings)
+const desktopNavItems = [
+    { path: '/',        label: 'Home',     icon: '/assets/icons/House.svg',      lucide: null, exact: true },
+    { path: '/explore', label: 'Explore',  icon: '/assets/icons/Ajna.svg',       lucide: null },
+    { path: '/ritual',  label: 'Ritual',   icon: '/assets/icons/Mindfulness.svg',lucide: null },
+    { path: '/goals',   label: 'Goals',    icon: '/assets/icons/Lotus.svg',      lucide: null },
+    { path: '/progress',label: 'Progress', icon: '/assets/icons/Calendar.svg',   lucide: null },
+    { path: '/settings',label: 'Settings', icon: null,                           lucide: Settings },
 ];
 
 const NavIcon = ({ item, isActive }) => {
@@ -41,7 +52,7 @@ const Navigation = () => {
                 style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
             >
                 <div className="flex items-center justify-around px-2 py-2">
-                    {navItems.map((item) => {
+                    {mobileNavItems.map((item) => {
                         const active = isActive(item.path, item.exact);
                         return (
                             <NavLink
@@ -74,7 +85,7 @@ const Navigation = () => {
 
                     {/* Nav Links */}
                     <div className="flex items-center gap-1">
-                        {navItems.map((item) => {
+                        {desktopNavItems.map((item) => {
                             const active = isActive(item.path, item.exact);
                             return (
                                 <NavLink
