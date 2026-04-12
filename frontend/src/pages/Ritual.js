@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Check } from 'lucide-react';
 import { getTechniqueById } from '../constants/techniques';
+import { MANI } from '../constants/mascot';
 
 const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
@@ -157,8 +158,9 @@ const Ritual = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <img src="/assets/icons/Mindfulness.svg" alt="Loading" className="w-10 h-10 animate-soft-pulse" />
+            <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+                <img src={MANI.meditating} alt="Mani meditating" className="w-24 h-24 animate-soft-pulse drop-shadow-sm" />
+                <p className="text-aligna-text-secondary font-body text-sm">Preparing your ritual...</p>
             </div>
         );
     }
@@ -166,7 +168,7 @@ const Ritual = () => {
     if (goals.length === 0) {
         return (
             <div className="max-w-lg mx-auto px-5 py-12 text-center" data-testid="ritual-no-goals">
-                <img src="/assets/illustrations/mental health problems-03.svg" alt="No goals" className="w-32 h-32 mx-auto mb-6 opacity-70" />
+                <img src={MANI.confused} alt="Mani needs a goal" className="w-32 h-32 mx-auto mb-6 drop-shadow-sm" />
                 <h2 className="font-heading text-2xl text-aligna-text mb-3">Set an intention first</h2>
                 <p className="text-aligna-text-secondary font-body text-sm mb-6">Create a manifestation goal to start your ritual</p>
                 <button
@@ -188,9 +190,7 @@ const Ritual = () => {
                 className={`min-h-screen ${sessionObj?.bg || 'bg-aligna-bg'} flex flex-col items-center justify-center px-6 text-center`}
             >
                 <div className="animate-float-up">
-                    <div className="w-24 h-24 rounded-full bg-aligna-primary/20 flex items-center justify-center mx-auto mb-6 animate-glow">
-                        <img src={sessionObj?.icon || '/assets/icons/Lotus.svg'} alt="Complete" className="w-14 h-14" />
-                    </div>
+                    <img src={MANI.trophy} alt="Mani celebrating!" className="w-32 h-32 mx-auto mb-4 drop-shadow-sm animate-glow" />
                     <h1 className="font-heading text-4xl text-aligna-text mb-3">Beautifully done</h1>
                     <p className="text-aligna-text-secondary font-body text-base mb-1">
                         You've completed your {sessionObj?.label}
@@ -243,7 +243,7 @@ const Ritual = () => {
     if (phase === 'select') {
         const goalTechnique = getTechniqueById(selectedGoal?.technique_id);
         return (
-            <div className="max-w-lg mx-auto px-5 py-6 md:px-8" data-testid="ritual-select-screen">
+            <div className="max-w-lg mx-auto px-5 py-6 pb-24 md:px-8 md:pb-8" data-testid="ritual-select-screen">
                 <button
                     data-testid="ritual-back-btn"
                     onClick={() => navigate('/')}
@@ -253,7 +253,7 @@ const Ritual = () => {
                 </button>
 
                 <div className="mb-8">
-                    <h1 className="font-heading text-4xl text-aligna-text mb-2">Begin Ritual</h1>
+                    <h1 className="font-heading text-3xl md:text-4xl text-aligna-text mb-2">Begin Ritual</h1>
                     <p className="text-aligna-text-secondary font-body text-sm">Choose your session and intention</p>
                 </div>
 
@@ -365,7 +365,7 @@ const Ritual = () => {
                 <button
                     data-testid="exit-ritual-btn"
                     onClick={() => setPhase('select')}
-                    className="p-2 rounded-full bg-white/50 backdrop-blur-sm transition-colors hover:bg-white/70"
+                    className="p-3 rounded-full bg-white/50 backdrop-blur-sm transition-colors hover:bg-white/70"
                 >
                     <ArrowLeft size={18} className="text-aligna-text" />
                 </button>
@@ -456,7 +456,7 @@ const Ritual = () => {
                                     onChange={e => setFreeformText(e.target.value)}
                                     placeholder={`Start writing here — let your thoughts flow freely...`}
                                     rows={6}
-                                    className="w-full ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-sm resize-none"
+                                    className="w-full ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-base resize-none"
                                 />
                                 <button
                                     data-testid="ritual-write-btn"
@@ -483,7 +483,7 @@ const Ritual = () => {
                                             : 'Type your affirmation...'
                                     }
                                     rows={2}
-                                    className="flex-1 ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-sm resize-none"
+                                    className="flex-1 ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-base resize-none"
                                     disabled={writings.length >= requiredCount}
                                 />
                                 <button

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Flame, ChevronRight, Bell } from 'lucide-react';
 import { getTechniqueById } from '../constants/techniques';
+import { MANI } from '../constants/mascot';
 
 const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
@@ -87,14 +88,14 @@ const Home = () => {
     if (loading) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-3">
-                <img src="/assets/icons/Lotus.svg" alt="Loading" className="w-12 h-12 animate-soft-pulse" />
+                <img src={MANI.meditating} alt="Mani meditating" className="w-24 h-24 animate-soft-pulse drop-shadow-sm" />
                 <p className="text-aligna-text-secondary font-body text-sm">Aligning...</p>
             </div>
         );
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-5 py-6 md:px-8" data-testid="home-page">
+        <div className="max-w-2xl mx-auto px-5 py-6 pb-24 md:px-8 md:pb-8" data-testid="home-page">
 
             {/* Header */}
             <div className="mb-7 animate-float-up">
@@ -103,7 +104,7 @@ const Home = () => {
                         <p className="text-aligna-text-secondary font-body text-xs tracking-[0.18em] uppercase mb-1">
                             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                         </p>
-                        <h1 className="font-heading text-4xl text-aligna-text leading-tight">
+                        <h1 className="font-heading text-3xl md:text-4xl text-aligna-text leading-tight">
                             {getGreeting()},<br />
                             <span className="text-aligna-primary">{user?.name?.split(' ')[0] || 'friend'}</span>
                         </h1>
@@ -175,10 +176,9 @@ const Home = () => {
                     style={{ animationDelay: '0.1s' }}
                 >
                     <img
-                        src="/assets/illustrations/mental health problems-03.svg"
-                        alt=""
-                        className="w-40 h-40 mx-auto mb-5 opacity-80"
-                        onError={(e) => { e.target.style.display = 'none'; }}
+                        src={MANI.confused}
+                        alt="Mani wondering where to start"
+                        className="w-36 h-36 mx-auto mb-5 drop-shadow-sm"
                     />
                     <h2 className="font-heading text-2xl text-aligna-text mb-2">Set your first intention</h2>
                     <p className="text-aligna-text-secondary font-body text-sm mb-7 max-w-[260px] mx-auto leading-relaxed">
@@ -280,7 +280,7 @@ const Home = () => {
                             className="text-center py-5 bg-aligna-success/10 border border-aligna-success/30 rounded-3xl animate-float-up animate-glow"
                             style={{ animationDelay: '0.2s' }}
                         >
-                            <img src="/assets/icons/Yin Yang.svg" alt="" className="w-8 h-8 mx-auto mb-2 opacity-60" />
+                            <img src={MANI.cool} alt="Mani is cool — you're done!" className="w-20 h-20 mx-auto mb-2 drop-shadow-sm" />
                             <p className="font-heading text-xl text-aligna-success">You are aligned for today</p>
                             <p className="text-aligna-text-secondary text-sm font-body mt-1">
                                 All {goalSessions.length} session{goalSessions.length !== 1 ? 's' : ''} complete

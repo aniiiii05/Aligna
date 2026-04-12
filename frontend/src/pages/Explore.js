@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowRight, Clock, Zap } from 'lucide-react';
 import { TECHNIQUES, DIFFICULTY_COLORS, CATEGORY_LABELS } from '../constants/techniques';
+import { MANI } from '../constants/mascot';
 
 const FILTERS = ['All', 'Repetition', 'Journaling', 'Visualization', 'Ritual'];
 
@@ -96,7 +97,7 @@ const TechniqueSheet = ({ technique, onClose, onUse }) => (
             </div>
 
             {/* CTA */}
-            <div className="p-5 border-t border-aligna-border shrink-0">
+            <div className="px-5 pt-5 border-t border-aligna-border shrink-0" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
                 <button
                     onClick={() => onUse(technique.id)}
                     className="w-full flex items-center justify-center gap-2 bg-aligna-text text-aligna-bg font-body font-medium py-4 rounded-full hover:opacity-90 transition-all duration-300 hover:-translate-y-0.5"
@@ -123,14 +124,17 @@ const Explore = () => {
     };
 
     return (
-        <div className="max-w-2xl mx-auto px-5 py-6 md:px-8">
+        <div className="max-w-2xl mx-auto px-5 py-6 pb-24 md:px-8 md:pb-8">
             {/* Header */}
-            <div className="mb-7 animate-float-up">
-                <p className="text-aligna-text-secondary text-xs font-body tracking-[0.18em] uppercase mb-1">Your Practice</p>
-                <h1 className="font-heading text-4xl text-aligna-text">Explore</h1>
-                <p className="text-aligna-text-secondary font-body text-sm mt-1 leading-relaxed">
-                    10 proven manifestation techniques — find the practice that resonates with you.
-                </p>
+            <div className="mb-7 animate-float-up flex items-start gap-4">
+                <div className="flex-1">
+                    <p className="text-aligna-text-secondary text-xs font-body tracking-[0.18em] uppercase mb-1">Your Practice</p>
+                    <h1 className="font-heading text-3xl md:text-4xl text-aligna-text">Explore</h1>
+                    <p className="text-aligna-text-secondary font-body text-sm mt-1 leading-relaxed">
+                        10 proven manifestation techniques — find the practice that resonates with you.
+                    </p>
+                </div>
+                <img src={MANI.questioning} alt="Mani wondering which technique to pick" className="w-20 h-20 shrink-0 drop-shadow-sm" />
             </div>
 
             {/* Filter tabs */}

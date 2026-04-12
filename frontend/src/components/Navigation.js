@@ -51,7 +51,7 @@ const Navigation = () => {
                 className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-aligna-border"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
             >
-                <div className="flex items-center justify-around px-2 py-2">
+                <div className="flex items-center justify-around px-1 py-1">
                     {mobileNavItems.map((item) => {
                         const active = isActive(item.path, item.exact);
                         return (
@@ -59,7 +59,7 @@ const Navigation = () => {
                                 key={item.path}
                                 to={item.path}
                                 data-testid={`nav-${item.label.toLowerCase()}`}
-                                className="flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition-all duration-300 min-w-[48px]"
+                                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all duration-200 min-w-[56px] min-h-[48px] justify-center active:bg-aligna-surface-secondary ${active ? 'bg-aligna-surface-secondary/60' : ''}`}
                             >
                                 <NavIcon item={item} isActive={active} />
                                 <span className={`text-[10px] font-body font-medium transition-colors duration-300 ${active ? 'text-aligna-primary' : 'text-aligna-text-secondary'}`}>

@@ -8,16 +8,11 @@ const Landing = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleGoogleLogin = async () => {
+    const handleGoogleLogin = () => {
         setLoading(true);
-        setError('');
-        try {
-            const res = await axios.get(`${API}/auth/google/login`);
-            window.location.href = res.data.url;
-        } catch {
-            setError('Could not connect to server. Please try again.');
-            setLoading(false);
-        }
+        // Navigate directly to the backend — backend sets the state cookie and
+        // redirects to Google in the same request, so the cookie stays same-origin.
+        window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/google/login`;
     };
 
     return (
@@ -57,39 +52,41 @@ const Landing = () => {
                     {/* Headline */}
                     <div className="text-center mb-8 animate-float-up" style={{ animationDelay: '0.1s' }}>
                         <h1 className="font-heading text-4xl sm:text-5xl text-aligna-text leading-tight mb-3">
-                            Manifest with<br />
-                            <span className="text-aligna-primary">intention</span>
+                            Your complete<br />
+                            <span className="text-aligna-primary">manifestation</span> practice
                         </h1>
                         <p className="text-aligna-text-secondary font-body text-sm leading-relaxed max-w-[280px] mx-auto">
-                            The 3‑6‑9 method — write your affirmation morning, midday &amp; night to align your reality
+                            10 proven techniques — scripting, 3‑6‑9, mirror work, visualisation &amp; more — all in one place
                         </p>
                     </div>
 
-                    {/* 3-6-9 ritual cards */}
+                    {/* Technique preview cards */}
                     <div className="w-full max-w-sm mb-8 animate-float-up" style={{ animationDelay: '0.2s' }}>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 gap-3">
                             {[
-                                { icon: '/assets/icons/Candle.svg', label: 'Morning', count: '3×', color: 'from-amber-50 to-orange-50', border: 'border-amber-200/60' },
-                                { icon: '/assets/icons/Mindfulness.svg', label: 'Midday', count: '6×', color: 'from-teal-50 to-cyan-50', border: 'border-teal-200/60' },
-                                { icon: '/assets/icons/Singing Bowl.svg', label: 'Evening', count: '9×', color: 'from-indigo-50 to-purple-50', border: 'border-indigo-200/60' },
+                                { icon: '/assets/icons/Candle.svg',        label: '3‑6‑9 Method',     tag: 'Repetition',     color: 'from-amber-50 to-orange-50',  border: 'border-amber-200/60' },
+                                { icon: '/assets/icons/Lotus.svg',          label: 'Scripting',        tag: 'Journaling',     color: 'from-rose-50 to-pink-50',     border: 'border-rose-200/60' },
+                                { icon: '/assets/icons/Mindfulness.svg',    label: 'Visualisation',    tag: 'Meditation',     color: 'from-teal-50 to-cyan-50',     border: 'border-teal-200/60' },
+                                { icon: '/assets/icons/Singing Bowl.svg',   label: 'Mirror Work',      tag: 'Ritual',         color: 'from-indigo-50 to-purple-50', border: 'border-indigo-200/60' },
                             ].map((item) => (
                                 <div
                                     key={item.label}
-                                    className={`flex flex-col items-center gap-2 py-4 px-2 rounded-2xl bg-gradient-to-br ${item.color} border ${item.border}`}
+                                    className={`flex items-center gap-3 py-3 px-4 rounded-2xl bg-gradient-to-br ${item.color} border ${item.border}`}
                                 >
-                                    <img src={item.icon} alt={item.label} className="w-8 h-8" />
-                                    <div className="text-center">
-                                        <p className="font-heading text-xl text-aligna-accent leading-none">{item.count}</p>
-                                        <p className="text-xs font-body text-aligna-text-secondary mt-0.5">{item.label}</p>
+                                    <img src={item.icon} alt={item.label} className="w-7 h-7 shrink-0" />
+                                    <div>
+                                        <p className="font-body font-medium text-aligna-text text-sm leading-tight">{item.label}</p>
+                                        <p className="text-[11px] font-body text-aligna-text-secondary">{item.tag}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
+                        <p className="text-center text-[11px] font-body text-aligna-text-secondary mt-2 opacity-60">+ 6 more techniques inside</p>
                     </div>
 
                     {/* Benefit pills */}
                     <div className="flex flex-wrap justify-center gap-2 mb-8 animate-float-up" style={{ animationDelay: '0.25s' }}>
-                        {['Build daily streaks', 'Track your journey', 'Grow with intention'].map((b) => (
+                        {['10 techniques', 'Daily rituals', 'Track streaks', 'Grow with intention'].map((b) => (
                             <span key={b} className="text-xs font-body text-aligna-text-secondary bg-aligna-surface border border-aligna-border px-3 py-1.5 rounded-full">
                                 {b}
                             </span>

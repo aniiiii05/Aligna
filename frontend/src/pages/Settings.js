@@ -40,9 +40,9 @@ const Settings = () => {
     };
 
     return (
-        <div className="max-w-2xl mx-auto px-5 py-6 md:px-8" data-testid="settings-page">
+        <div className="max-w-2xl mx-auto px-5 py-6 pb-24 md:px-8 md:pb-8" data-testid="settings-page">
             <div className="mb-8">
-                <h1 className="font-heading text-4xl text-aligna-text">Settings</h1>
+                <h1 className="font-heading text-3xl md:text-4xl text-aligna-text">Settings</h1>
             </div>
 
             {/* Profile Card */}
@@ -133,12 +133,12 @@ const Settings = () => {
                         data-testid="toggle-notifications-btn"
                         onClick={handleNotifications}
                         disabled={notifStatus === 'denied'}
-                        className={`relative w-12 h-6 rounded-full transition-all duration-300 disabled:opacity-50 ${
+                        className={`relative w-14 h-7 rounded-full transition-all duration-300 disabled:opacity-50 ${
                             notifStatus === 'granted' ? 'bg-aligna-primary' : 'bg-aligna-border'
                         }`}
                     >
-                        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 ${
-                            notifStatus === 'granted' ? 'left-7' : 'left-1'
+                        <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all duration-300 ${
+                            notifStatus === 'granted' ? 'left-8' : 'left-1'
                         }`} />
                     </button>
                 </div>
@@ -176,7 +176,7 @@ const Settings = () => {
             {showNotifInfo && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center">
                     <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowNotifInfo(false)} />
-                    <div className="relative z-10 w-full max-w-lg bg-aligna-surface rounded-t-3xl p-6 shadow-xl animate-float-up">
+                    <div className="relative z-10 w-full max-w-lg bg-aligna-surface rounded-t-3xl px-6 pt-6 shadow-xl animate-float-up" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-heading text-xl text-aligna-text">Disable Notifications</h3>
                             <button onClick={() => setShowNotifInfo(false)} className="p-2 rounded-full hover:bg-aligna-surface-secondary">

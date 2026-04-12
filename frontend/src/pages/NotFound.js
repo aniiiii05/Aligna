@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MANI } from '../constants/mascot';
 
 const NotFound = () => {
     const navigate = useNavigate();
@@ -13,16 +14,15 @@ const NotFound = () => {
             </div>
 
             <div className="relative z-10 animate-float-up">
-                <div className="flex justify-center gap-4 mb-8 opacity-30">
-                    {['/assets/icons/Lotus.svg', '/assets/icons/Yin Yang.svg', '/assets/icons/Hamsa.svg'].map((icon, i) => (
-                        <img key={i} src={icon} alt="" className="w-6 h-6" />
-                    ))}
-                </div>
-
+                <img
+                    src={MANI.sad}
+                    alt="Mani is lost"
+                    className="w-36 h-36 mx-auto mb-4 drop-shadow-sm"
+                />
                 <p className="font-heading text-8xl text-aligna-primary/30 leading-none mb-2">404</p>
                 <h1 className="font-heading text-3xl text-aligna-text mb-3">Lost in the flow</h1>
                 <p className="text-aligna-text-secondary font-body text-sm mb-10 max-w-[260px] mx-auto leading-relaxed">
-                    This path doesn't exist. Let's bring you back to alignment.
+                    Even Mani can't find this page. Let's bring you back to alignment.
                 </p>
 
                 <button

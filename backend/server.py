@@ -8,7 +8,6 @@ import logging
 import json
 import hmac
 import hashlib
-import base64
 import secrets
 from urllib.parse import urlencode
 from pathlib import Path
@@ -18,12 +17,18 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
+import certifi
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+# certifi provides the correct CA bundle for MongoDB Atlas TLS on Python 3.12 / cloud hosts
+client = AsyncIOMotorClient(
+    mongo_url,
+    tlsCAFile=certifi.where(),
+    serverSelectionTimeoutMS=10000,
+)
 db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
@@ -177,34 +182,62 @@ async def get_current_user(request: Request):
     return user_doc
 
 
+# --- AUTH HELPERS ---
+def _oauth_state_secret() -> bytes:
+    """Return a stable signing secret for stateless OAuth state tokens."""
+    raw = os.environ.get("WAITLIST_ADMIN_KEY", "aligna-oauth-fallback-secret")
+    return raw.encode()
+
+def _make_oauth_state() -> str:
+    """Generate a self-contained, HMAC-signed state token — no cookie needed.
+    Format: <nonce>.<timestamp>.<signature>
+    Valid for 15 minutes. Works on all mobile browsers (no cookie required).
+    """
+    nonce = secrets.token_urlsafe(12)
+    ts    = str(int(datetime.now(timezone.utc).timestamp()))
+    body  = f"{nonce}.{ts}"
+    sig   = hmac.new(_oauth_state_secret(), body.encode(), hashlib.sha256).hexdigest()[:24]
+    return f"{body}.{sig}"
+
+def _verify_oauth_state(state: str) -> bool:
+    """Verify HMAC signature and expiry (15 min window)."""
+    try:
+        parts = state.rsplit(".", 1)
+        if len(parts) != 2:
+            return False
+        body, sig = parts
+        expected = hmac.new(_oauth_state_secret(), body.encode(), hashlib.sha256).hexdigest()[:24]
+        if not hmac.compare_digest(sig, expected):
+            return False
+        ts = int(body.split(".")[1])
+        age = int(datetime.now(timezone.utc).timestamp()) - ts
+        return 0 <= age <= 900          # valid for 15 minutes
+    except Exception:
+        return False
+
+
 # --- AUTH ROUTES ---
 @api_router.get("/auth/google/login")
-async def google_login(response: Response):
-    """Return Google OAuth URL for the frontend to redirect to."""
-    client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
+async def google_login():
+    """Redirect browser directly to Google OAuth with a stateless HMAC state token.
+    No cookie required — works on all browsers including iOS Safari and Android Chrome.
+    """
+    client_id   = os.environ.get("GOOGLE_CLIENT_ID", "")
     redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "")
     if not client_id or not redirect_uri:
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
 
-    # CSRF protection: generate state, store in httponly cookie, verify in callback
-    state = secrets.token_urlsafe(16)
-    response.set_cookie(
-        key="oauth_state", value=state,
-        httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE,
-        max_age=600, path="/"
-    )
-
+    state = _make_oauth_state()
     params = {
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
+        "client_id":     client_id,
+        "redirect_uri":  redirect_uri,
         "response_type": "code",
-        "scope": "openid email profile",
-        "access_type": "online",
-        "prompt": "select_account",
-        "state": state,
+        "scope":         "openid email profile",
+        "access_type":   "online",
+        "prompt":        "select_account",
+        "state":         state,
     }
-    url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
-    return {"url": url}
+    return RedirectResponse(url=f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
 
 
 @api_router.get("/auth/google/callback")
@@ -212,10 +245,9 @@ async def google_callback(request: Request, code: str = None, error: str = None,
     """Handle Google OAuth callback, create session, redirect to frontend."""
     frontend_url = os.environ.get("FRONTEND_URL", "")
 
-    # Verify CSRF state token
-    expected_state = request.cookies.get("oauth_state")
-    if not expected_state or not state or not hmac.compare_digest(state, expected_state):
-        logger.warning("OAuth state mismatch — possible CSRF attempt")
+    # Verify stateless HMAC state — no cookie dependency
+    if not state or not _verify_oauth_state(state):
+        logger.warning("OAuth state verification failed")
         return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
 
     if error or not code:

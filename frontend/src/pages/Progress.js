@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Flame, Trophy, BookOpen } from 'lucide-react';
+import { MANI } from '../constants/mascot';
 
 const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 
@@ -42,7 +43,7 @@ const Progress = () => {
     const getDateStatus = (dateStr) => {
         const sessions = calendar[dateStr];
         if (!sessions || sessions.length === 0) return 'none';
-        if (sessions.length === 3) return 'full';
+        if (sessions.length >= 3) return 'full';
         return 'partial';
     };
 
@@ -61,8 +62,9 @@ const Progress = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <img src="/assets/icons/Calendar.svg" alt="Loading" className="w-10 h-10 animate-soft-pulse" />
+            <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+                <img src={MANI.studious} alt="Mani checking your progress" className="w-24 h-24 animate-soft-pulse drop-shadow-sm" />
+                <p className="text-aligna-text-secondary font-body text-sm">Loading your journey...</p>
             </div>
         );
     }
@@ -70,11 +72,11 @@ const Progress = () => {
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     return (
-        <div className="max-w-2xl mx-auto px-5 py-6 md:px-8" data-testid="progress-page">
+        <div className="max-w-2xl mx-auto px-5 py-6 pb-24 md:px-8 md:pb-8" data-testid="progress-page">
             {/* Header */}
             <div className="mb-8">
                 <p className="text-aligna-text-secondary text-xs font-body tracking-[0.15em] uppercase mb-1">Your Journey</p>
-                <h1 className="font-heading text-4xl text-aligna-text">Progress</h1>
+                <h1 className="font-heading text-3xl md:text-4xl text-aligna-text">Progress</h1>
             </div>
 
             {/* Stats Row */}
@@ -102,7 +104,11 @@ const Progress = () => {
                     data-testid="streak-visual"
                     className="mb-6 bg-gradient-to-r from-aligna-accent/10 to-aligna-primary/10 border border-aligna-accent/20 rounded-3xl p-5 flex items-center gap-4 animate-float-up"
                 >
-                    <img src="/assets/icons/Candle.svg" alt="Streak" className="w-10 h-10 opacity-80" />
+                    <img
+                        src={streak.streak >= 30 ? MANI.wise : streak.streak >= 7 ? MANI.superhero : MANI.running}
+                        alt="Mani cheering you on"
+                        className="w-16 h-16 shrink-0 drop-shadow-sm"
+                    />
                     <div>
                         <p className="font-heading text-xl text-aligna-text">
                             {streak.streak === 1 ? 'Day one of many' : `${streak.streak} days of alignment`}
@@ -188,7 +194,7 @@ const Progress = () => {
                 {/* Legend */}
                 <div className="flex items-center gap-4 mt-4 pt-3 border-t border-aligna-border">
                     {[
-                        { color: 'bg-aligna-primary', label: 'All 3 complete' },
+                        { color: 'bg-aligna-primary', label: '3+ sessions' },
                         { color: 'bg-aligna-primary/30', label: 'Partial' },
                         { color: 'bg-aligna-surface-secondary ring-1 ring-aligna-primary/30', label: 'Today' },
                     ].map(item => (

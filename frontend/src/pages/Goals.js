@@ -58,7 +58,7 @@ const GoalModal = ({ goal, defaultTechniqueId, onSave, onClose }) => {
                 </div>
 
                 {/* Scrollable content */}
-                <div className="overflow-y-auto flex-1 px-6 pb-6 space-y-5">
+                <div className="overflow-y-auto flex-1 px-6 pb-6 space-y-5" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
                     {/* Goal Title */}
                     <div>
                         <label className="block text-xs font-body text-aligna-text-secondary tracking-[0.15em] uppercase mb-2">Goal Title</label>
@@ -67,7 +67,7 @@ const GoalModal = ({ goal, defaultTechniqueId, onSave, onClose }) => {
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g., Financial Freedom"
-                            className="w-full ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-sm"
+                            className="w-full ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-base"
                         />
                     </div>
 
@@ -80,7 +80,7 @@ const GoalModal = ({ goal, defaultTechniqueId, onSave, onClose }) => {
                             onChange={e => setAffirmation(e.target.value)}
                             placeholder="e.g., I am a money magnet and wealth flows to me easily"
                             rows={3}
-                            className="w-full ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-sm resize-none"
+                            className="w-full ritual-input px-4 py-3 font-body text-aligna-text placeholder-aligna-text-secondary/50 text-base resize-none"
                         />
                         <p className="text-aligna-text-secondary text-xs mt-1 font-body">Write in present tense, as if it's already true</p>
                     </div>
@@ -242,12 +242,12 @@ const Goals = () => {
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-5 py-6 md:px-8" data-testid="goals-page">
+        <div className="max-w-2xl mx-auto px-5 py-6 pb-24 md:px-8 md:pb-8" data-testid="goals-page">
             {/* Header */}
             <div className="flex items-start justify-between mb-8">
                 <div>
                     <p className="text-aligna-text-secondary text-xs font-body tracking-[0.15em] uppercase mb-1">My Manifestations</p>
-                    <h1 className="font-heading text-4xl text-aligna-text">Goals</h1>
+                    <h1 className="font-heading text-3xl md:text-4xl text-aligna-text">Goals</h1>
                     <p className="text-aligna-text-secondary text-sm font-body mt-1">{goals.length}/{limit} intentions set</p>
                 </div>
                 {!atLimit ? (
@@ -324,7 +324,7 @@ const Goals = () => {
                                         <button
                                             data-testid={`edit-goal-${goal.goal_id}`}
                                             onClick={() => { setEditGoal(goal); setShowModal(true); setConfirmDelete(null); }}
-                                            className="p-2 rounded-full hover:bg-aligna-surface-secondary transition-colors"
+                                            className="p-3 rounded-full hover:bg-aligna-surface-secondary transition-colors"
                                         >
                                             <Edit2 size={15} className="text-aligna-text-secondary" />
                                         </button>
@@ -349,7 +349,7 @@ const Goals = () => {
                                             <button
                                                 data-testid={`delete-goal-${goal.goal_id}`}
                                                 onClick={() => setConfirmDelete(goal.goal_id)}
-                                                className="p-2 rounded-full hover:bg-red-50 transition-colors"
+                                                className="p-3 rounded-full hover:bg-red-50 transition-colors"
                                             >
                                                 <Trash2 size={15} className="text-aligna-error" />
                                             </button>
