@@ -318,8 +318,12 @@ async def google_callback(request: Request, code: str = None, error: str = None,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    # Set cookie and redirect to frontend
-    redirect = RedirectResponse(url=f"{frontend_url}/")
+    # Redirect to frontend callback page with the token in the URL.
+    # This approach works on all mobile browsers (iOS Safari ITP, Android Chrome) because
+    # it doesn't rely on cross-domain SameSite=None cookies being forwarded.
+    # The frontend reads the token, stores it in localStorage, and uses Bearer auth.
+    # We also set the cookie for desktop browsers where cookies work fine.
+    redirect = RedirectResponse(url=f"{frontend_url}/auth/callback?token={session_token}")
     redirect.set_cookie(
         key="session_token", value=session_token,
         httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, path="/",

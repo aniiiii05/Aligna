@@ -17,6 +17,7 @@ import Contact from './pages/Contact';
 import Explore from './pages/Explore';
 import Waitlist from './pages/Waitlist';
 import WaitlistAdmin from './pages/WaitlistAdmin';
+import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
 
 const MainLayout = () => (
@@ -42,6 +43,7 @@ function App() {
                             <Route path="/contact" element={<Contact />} />
                             <Route path="/waitlist" element={<Waitlist />} />
                             <Route path="/waitlist-admin" element={<WaitlistAdmin />} />
+                            <Route path="/auth/callback" element={<AuthCallback />} />
 
                             {/* Protected app routes */}
                             <Route
