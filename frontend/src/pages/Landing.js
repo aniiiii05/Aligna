@@ -28,7 +28,7 @@ const Landing = () => {
             <div className="flex-1 flex flex-col relative z-10">
 
                 {/* Hero section */}
-                <div className="relative w-full overflow-hidden" style={{ height: '52vh', minHeight: '300px' }}>
+                <div className="relative w-full overflow-hidden" style={{ height: '45vh', minHeight: '260px', maxHeight: '400px' }}>
                     <img
                         src="/assets/1255.png"
                         alt=""
@@ -47,11 +47,11 @@ const Landing = () => {
                 </div>
 
                 {/* Content below hero */}
-                <div className="flex-1 flex flex-col items-center px-6 pb-8 -mt-2">
+                <div className="flex-1 flex flex-col items-center px-5 pb-10 -mt-2">
 
                     {/* Headline */}
                     <div className="text-center mb-8 animate-float-up" style={{ animationDelay: '0.1s' }}>
-                        <h1 className="font-heading text-4xl sm:text-5xl text-aligna-text leading-tight mb-3">
+                        <h1 className="font-heading text-3xl sm:text-5xl text-aligna-text leading-tight mb-3">
                             Your complete<br />
                             <span className="text-aligna-primary">manifestation</span> practice
                         </h1>
@@ -61,7 +61,7 @@ const Landing = () => {
                     </div>
 
                     {/* Technique preview cards */}
-                    <div className="w-full max-w-sm mb-8 animate-float-up" style={{ animationDelay: '0.2s' }}>
+                    <div className="w-full max-w-xs sm:max-w-sm mb-7 animate-float-up" style={{ animationDelay: '0.2s' }}>
                         <div className="grid grid-cols-2 gap-3">
                             {[
                                 { icon: '/assets/icons/Candle.svg',        label: '3‑6‑9 Method',     tag: 'Repetition',     color: 'from-amber-50 to-orange-50',  border: 'border-amber-200/60' },
@@ -85,7 +85,7 @@ const Landing = () => {
                     </div>
 
                     {/* Benefit pills */}
-                    <div className="flex flex-wrap justify-center gap-2 mb-8 animate-float-up" style={{ animationDelay: '0.25s' }}>
+                    <div className="flex flex-wrap justify-center gap-2 mb-6 animate-float-up" style={{ animationDelay: '0.25s' }}>
                         {['10 techniques', 'Daily rituals', 'Track streaks', 'Grow with intention'].map((b) => (
                             <span key={b} className="text-xs font-body text-aligna-text-secondary bg-aligna-surface border border-aligna-border px-3 py-1.5 rounded-full">
                                 {b}

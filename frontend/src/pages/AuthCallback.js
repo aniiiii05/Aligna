@@ -3,21 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
- * Handles the OAuth redirect from the backend.
- * The backend sends: /auth/callback?token=<session_token>
+ * Landing page for the OAuth redirect from the backend.
+ * URL: /auth/callback?token=<session_token>
  *
- * This page:
- *  1. Reads the token from the URL query param
- *  2. Stores it in localStorage and sets the axios Authorization header
- *  3. Refreshes auth state so the app knows the user is logged in
- *  4. Redirects to home
+ * Flow:
+ *  1. Read token from URL
+ *  2. Store in localStorage + set axios Authorization header
+ *  3. Call /api/auth/me to validate and load the user
+ *  4. Navigate to home (or back to login if it fails)
  *
- * This is necessary for mobile browsers (iOS Safari ITP, Android Chrome)
- * that block cross-domain SameSite=None cookies.
+ * Why this exists: mobile browsers (iOS Safari, Android Chrome) block
+ * cross-domain SameSite=None cookies, so we pass the session token
+ * through the URL instead of relying on cookie forwarding.
  */
 const AuthCallback = () => {
     const navigate = useNavigate();
-    const { storeToken, refreshUser } = useAuth();
+    const { storeToken, refreshUser, setLoading } = useAuth();
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -25,6 +26,7 @@ const AuthCallback = () => {
         const error = params.get('error');
 
         if (error) {
+            setLoading(false);
             navigate('/login?error=' + error, { replace: true });
             return;
         }
@@ -34,6 +36,7 @@ const AuthCallback = () => {
         }
 
         refreshUser().then((userData) => {
+            setLoading(false);
             if (userData) {
                 navigate('/', { replace: true });
             } else {
@@ -43,13 +46,15 @@ const AuthCallback = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-aligna-bg flex flex-col items-center justify-center gap-3">
+        <div className="min-h-screen bg-aligna-bg flex flex-col items-center justify-center gap-4">
             <img
                 src="/assets/icons/Lotus.svg"
                 alt="Aligna"
-                className="w-12 h-12 animate-soft-pulse"
+                className="w-14 h-14 animate-soft-pulse"
             />
-            <p className="text-aligna-text-secondary font-body text-sm">Signing you in...</p>
+            <p className="text-aligna-text-secondary font-body text-sm tracking-wide">
+                Signing you in...
+            </p>
         </div>
     );
 };

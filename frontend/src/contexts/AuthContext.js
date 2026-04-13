@@ -15,31 +15,41 @@ const applyToken = (token) => {
 };
 
 export const AuthProvider = ({ children }) => {
+    // On the /auth/callback route we skip the loading state — AuthCallback owns it.
+    const onCallbackPage = window.location.pathname.startsWith('/auth/callback');
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!onCallbackPage);
 
     const checkAuth = useCallback(async () => {
-        // Restore Bearer token from localStorage so mobile browsers (iOS Safari,
-        // Android Chrome) can authenticate without cross-domain cookies.
-        const stored = localStorage.getItem(TOKEN_KEY);
-        if (stored) applyToken(stored);
+        const tokenAtStart = localStorage.getItem(TOKEN_KEY);
+        if (tokenAtStart) applyToken(tokenAtStart);
 
         try {
             const res = await axios.get(`${API}/auth/me`, { withCredentials: true });
             setUser(res.data);
         } catch {
-            // Session expired or invalid — clear stored token
-            localStorage.removeItem(TOKEN_KEY);
-            applyToken(null);
-            setUser(null);
+            // Guard against the OAuth callback race condition:
+            // AuthCallback may have stored a fresh token while this request was
+            // in flight (with no token). If the token changed, don't wipe it.
+            const tokenNow = localStorage.getItem(TOKEN_KEY);
+            const tokenChanged = tokenNow && tokenNow !== tokenAtStart;
+            if (!tokenChanged) {
+                if (tokenAtStart) localStorage.removeItem(TOKEN_KEY);
+                applyToken(null);
+                setUser(null);
+            }
+            // If token was just stored by AuthCallback, leave user/token alone —
+            // AuthCallback's refreshUser() call will set the user correctly.
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
+        // Skip on the OAuth callback page — AuthCallback handles auth setup there.
+        if (onCallbackPage) return;
         checkAuth();
-    }, [checkAuth]);
+    }, [checkAuth, onCallbackPage]);
 
     const storeToken = useCallback((token) => {
         localStorage.setItem(TOKEN_KEY, token);
@@ -66,7 +76,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, setUser, loading, logout, refreshUser, storeToken, checkAuth }}>
+        <AuthContext.Provider value={{ user, setUser, loading, setLoading, logout, refreshUser, storeToken, checkAuth }}>
             {children}
         </AuthContext.Provider>
     );
