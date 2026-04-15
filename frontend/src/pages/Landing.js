@@ -13,7 +13,7 @@ const Landing = () => {
     };
 
     return (
-        <div className="min-h-screen bg-aligna-bg flex flex-col overflow-hidden" data-testid="landing-page">
+        <div className="min-h-dvh bg-aligna-bg flex flex-col overflow-hidden" data-testid="landing-page">
 
             {/* Ambient background */}
             <div className="fixed inset-0 pointer-events-none">
@@ -37,7 +37,7 @@ const Landing = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-aligna-bg via-transparent to-transparent" />
 
                     {/* Brand overlay on hero */}
-                    <div className="absolute top-0 left-0 right-0 pt-safe-top pt-8 px-6 flex items-center gap-3 animate-float-up">
+                    <div className="absolute top-0 left-0 right-0 pt-safe pt-8 px-6 flex items-center gap-3 animate-float-up">
                         <img src="/assets/icons/Lotus.svg" alt="Aligna" className="w-8 h-8 opacity-90" />
                         <span className="font-heading text-3xl text-aligna-text tracking-tight">Aligna</span>
                     </div>
