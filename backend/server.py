@@ -318,12 +318,21 @@ async def google_callback(request: Request, code: str = None, error: str = None,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    # Redirect to frontend callback page with the token in the URL.
-    # This approach works on all mobile browsers (iOS Safari ITP, Android Chrome) because
-    # it doesn't rely on cross-domain SameSite=None cookies being forwarded.
-    # The frontend reads the token, stores it in localStorage, and uses Bearer auth.
-    # We also set the cookie for desktop browsers where cookies work fine.
-    redirect = RedirectResponse(url=f"{frontend_url}/auth/callback?token={session_token}")
+    # Encode minimal user data into the redirect URL so the frontend can hydrate
+    # the auth state without making a second /api/auth/me round-trip.
+    # This eliminates the race condition on mobile (iOS Safari ITP, Android Chrome)
+    # where the Bearer token wasn't yet applied when the me-check fired.
+    import base64
+    user_summary = json.dumps({
+        "user_id": user_doc["user_id"],
+        "email": user_doc.get("email", ""),
+        "name": user_doc.get("name", ""),
+        "picture": user_doc.get("picture", ""),
+        "plan": user_doc.get("plan", "free"),
+    }, separators=(',', ':'))
+    user_b64 = base64.urlsafe_b64encode(user_summary.encode()).decode().rstrip('=')
+
+    redirect = RedirectResponse(url=f"{frontend_url}/auth/callback?token={session_token}&ud={user_b64}")
     redirect.set_cookie(
         key="session_token", value=session_token,
         httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, path="/",

@@ -3,8 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut, Bell, BellOff, Crown, X } from 'lucide-react';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const PLAN_LABELS = { free: 'Seed (Free)', pro: 'Bloom (Pro)', premium: 'Radiance (Premium)' };
 

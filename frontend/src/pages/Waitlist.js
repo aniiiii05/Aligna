@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const FEATURES = [
     { icon: '/assets/icons/Candle.svg',       label: 'Morning ritual',      desc: 'Write your affirmation 3× to set the day\'s intention' },

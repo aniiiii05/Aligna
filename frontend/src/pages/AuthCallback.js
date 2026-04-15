@@ -1,24 +1,24 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
- * Landing page for the OAuth redirect from the backend.
- * URL: /auth/callback?token=<session_token>
+ * Handles the OAuth redirect: /auth/callback?token=<session_token>
+ *
+ * With the Vercel API proxy in place, the OAuth callback goes through
+ * alignaa.org/api/auth/google/callback — so the session cookie that Railway
+ * sets in that response is stored as a FIRST-PARTY cookie for alignaa.org.
+ *
+ * This means checkAuth() on the next page load will authenticate via the
+ * cookie even if localStorage is unavailable (iOS Safari Private Browsing).
  *
  * Flow:
- *  1. Read token from URL
- *  2. Store in localStorage + set axios Authorization header
- *  3. Call /api/auth/me to validate and load the user
- *  4. Navigate to home (or back to login if it fails)
- *
- * Why this exists: mobile browsers (iOS Safari, Android Chrome) block
- * cross-domain SameSite=None cookies, so we pass the session token
- * through the URL instead of relying on cookie forwarding.
+ *  1. Store token in localStorage (best-effort — safe wrapper handles throws)
+ *  2. Hard-redirect to '/' via window.location.replace
+ *  3. Fresh page load → checkAuth() → /api/auth/me → authenticated via
+ *     first-party cookie or Bearer token from localStorage
  */
 const AuthCallback = () => {
-    const navigate = useNavigate();
-    const { storeToken, refreshUser, setLoading } = useAuth();
+    const { storeToken } = useAuth();
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -26,23 +26,18 @@ const AuthCallback = () => {
         const error = params.get('error');
 
         if (error) {
-            setLoading(false);
-            navigate('/login?error=' + error, { replace: true });
+            window.location.replace('/login?error=' + encodeURIComponent(error));
             return;
         }
 
+        // Store token for Bearer auth on future loads (safe even if localStorage
+        // is blocked — the first-party session cookie serves as backup).
         if (token) {
             storeToken(token);
         }
 
-        refreshUser().then((userData) => {
-            setLoading(false);
-            if (userData) {
-                navigate('/', { replace: true });
-            } else {
-                navigate('/login?error=auth_failed', { replace: true });
-            }
-        });
+        // Hard-redirect so checkAuth() runs fresh with full cookie + token context.
+        window.location.replace('/');
     }, []);
 
     return (

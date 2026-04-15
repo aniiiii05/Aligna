@@ -4,8 +4,7 @@ import axios from 'axios';
 import { ArrowLeft, Check } from 'lucide-react';
 import { getTechniqueById } from '../constants/techniques';
 import { MANI } from '../constants/mascot';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const getCurrentDefaultSession = (technique) => {
     if (!technique) return null;

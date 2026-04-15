@@ -4,8 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { Plus, Trash2, Edit2, X, Check, Lock, Compass } from 'lucide-react';
 import { TECHNIQUES, getTechniqueById, DIFFICULTY_COLORS } from '../constants/techniques';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const PLAN_LIMITS = { free: 1, pro: 3, premium: 10 };
 const CATEGORIES = [

@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Flame, Trophy, BookOpen } from 'lucide-react';
 import { MANI } from '../constants/mascot';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const SESSION_COLORS = {
     morning: 'bg-amber-100 text-amber-700',

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Users, TrendingUp, Calendar, Eye, EyeOff } from 'lucide-react';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const WaitlistAdmin = () => {
     const [key, setKey]         = useState('');

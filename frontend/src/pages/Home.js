@@ -5,8 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Flame, ChevronRight, Bell } from 'lucide-react';
 import { getTechniqueById } from '../constants/techniques';
 import { MANI } from '../constants/mascot';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const CATEGORY_ICONS = {
     general:   '/assets/icons/Lotus.svg',
