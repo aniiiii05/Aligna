@@ -1,10 +1,25 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API } from '../lib/api';
 
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
 const AuthContext = createContext(null);
 
 const TOKEN_KEY = 'aligna_session';
+
+// Safe localStorage wrapper — iOS Safari Private Browsing throws QuotaExceededError
+// on setItem and SecurityError on some older versions. Never let storage errors
+// crash the app; the session cookie (set via Vercel proxy) acts as a backup.
+const storage = {
+    get: (key) => {
+        try { return localStorage.getItem(key); } catch { return null; }
+    },
+    set: (key, val) => {
+        try { localStorage.setItem(key, val); } catch { /* ignored */ }
+    },
+    remove: (key) => {
+        try { localStorage.removeItem(key); } catch { /* ignored */ }
+    },
+};
 
 const applyToken = (token) => {
     if (token) {
@@ -15,44 +30,50 @@ const applyToken = (token) => {
 };
 
 export const AuthProvider = ({ children }) => {
-    // On the /auth/callback route we skip the loading state — AuthCallback owns it.
     const onCallbackPage = window.location.pathname.startsWith('/auth/callback');
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(!onCallbackPage);
 
     const checkAuth = useCallback(async () => {
-        const tokenAtStart = localStorage.getItem(TOKEN_KEY);
+        const tokenAtStart = storage.get(TOKEN_KEY);
         if (tokenAtStart) applyToken(tokenAtStart);
 
         try {
             const res = await axios.get(`${API}/auth/me`, { withCredentials: true });
             setUser(res.data);
         } catch {
-            // Guard against the OAuth callback race condition:
-            // AuthCallback may have stored a fresh token while this request was
-            // in flight (with no token). If the token changed, don't wipe it.
-            const tokenNow = localStorage.getItem(TOKEN_KEY);
+            const tokenNow = storage.get(TOKEN_KEY);
             const tokenChanged = tokenNow && tokenNow !== tokenAtStart;
             if (!tokenChanged) {
-                if (tokenAtStart) localStorage.removeItem(TOKEN_KEY);
+                if (tokenAtStart) storage.remove(TOKEN_KEY);
                 applyToken(null);
                 setUser(null);
             }
-            // If token was just stored by AuthCallback, leave user/token alone —
-            // AuthCallback's refreshUser() call will set the user correctly.
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        // Skip on the OAuth callback page — AuthCallback handles auth setup there.
         if (onCallbackPage) return;
         checkAuth();
     }, [checkAuth, onCallbackPage]);
 
+    // iOS Safari BFCache: when Safari restores a page from its back-forward
+    // cache, React effects don't re-run. Re-running checkAuth on pageshow
+    // picks up any token/cookie stored during the OAuth callback.
+    useEffect(() => {
+        const handlePageShow = (event) => {
+            if (event.persisted && !onCallbackPage) {
+                checkAuth();
+            }
+        };
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
+    }, [checkAuth, onCallbackPage]);
+
     const storeToken = useCallback((token) => {
-        localStorage.setItem(TOKEN_KEY, token);
+        storage.set(TOKEN_KEY, token);
         applyToken(token);
     }, []);
 
@@ -60,7 +81,7 @@ export const AuthProvider = ({ children }) => {
         try {
             await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
         } catch {}
-        localStorage.removeItem(TOKEN_KEY);
+        storage.remove(TOKEN_KEY);
         applyToken(null);
         setUser(null);
     };

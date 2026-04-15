@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-
-const API = `${import.meta.env.VITE_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 const Landing = () => {
     const [loading, setLoading] = useState(false);
@@ -10,9 +8,8 @@ const Landing = () => {
 
     const handleGoogleLogin = () => {
         setLoading(true);
-        // Navigate directly to the backend — backend sets the state cookie and
-        // redirects to Google in the same request, so the cookie stays same-origin.
-        window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/google/login`;
+        // Use the app's own /api path in production to keep auth first-party on iOS Safari.
+        window.location.href = `${API}/auth/google/login`;
     };
 
     return (
