@@ -8,7 +8,7 @@ const ProtectedRoute = ({ children }) => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-aligna-bg flex items-center justify-center">
+            <div className="min-h-dvh bg-aligna-bg flex items-center justify-center">
                 <div className="text-center">
                     <img src="/assets/icons/Lotus.svg" alt="Loading" className="w-12 h-12 mx-auto mb-4 animate-soft-pulse" />
                     <p className="text-aligna-text-secondary font-body text-sm">Aligning...</p>

@@ -21,7 +21,7 @@ import AuthCallback from './pages/AuthCallback';
 import NotFound from './pages/NotFound';
 
 const MainLayout = () => (
-    <div className="min-h-screen bg-aligna-bg">
+    <div className="min-h-dvh bg-aligna-bg">
         <Navigation />
         <main className="pb-24 md:pb-0 md:pt-20">
             <Outlet />

@@ -41,7 +41,7 @@ const AuthCallback = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-aligna-bg flex flex-col items-center justify-center gap-4">
+        <div className="min-h-dvh bg-aligna-bg flex flex-col items-center justify-center gap-4">
             <img
                 src="/assets/icons/Lotus.svg"
                 alt="Aligna"

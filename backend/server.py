@@ -9,7 +9,7 @@ import json
 import hmac
 import hashlib
 import secrets
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from pathlib import Path
 import re as _re
 from pydantic import BaseModel, field_validator
@@ -18,6 +18,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
 import certifi
+from collections import defaultdict, deque
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -64,6 +65,27 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 IS_PRODUCTION = os.environ.get("ENVIRONMENT", "development") == "production"
 COOKIE_SECURE = IS_PRODUCTION
 COOKIE_SAMESITE = "none" if IS_PRODUCTION else "lax"
+RATE_LIMIT_BUCKETS: dict[str, deque] = defaultdict(deque)
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit_or_429(key: str, max_requests: int, window_seconds: int) -> None:
+    now = datetime.now(timezone.utc).timestamp()
+    bucket = RATE_LIMIT_BUCKETS[key]
+
+    while bucket and (now - bucket[0]) > window_seconds:
+        bucket.popleft()
+
+    if len(bucket) >= max_requests:
+        raise HTTPException(status_code=429, detail="Too many requests. Please try again shortly.")
+
+    bucket.append(now)
 
 
 # --- Lemon Squeezy API Helper ---
@@ -185,7 +207,14 @@ async def get_current_user(request: Request):
 # --- AUTH HELPERS ---
 def _oauth_state_secret() -> bytes:
     """Return a stable signing secret for stateless OAuth state tokens."""
-    raw = os.environ.get("WAITLIST_ADMIN_KEY", "aligna-oauth-fallback-secret")
+    raw = (
+        os.environ.get("OAUTH_STATE_SECRET")
+        or os.environ.get("GOOGLE_CLIENT_SECRET")
+        or os.environ.get("WAITLIST_ADMIN_KEY")
+    )
+    if not raw:
+        # Dev fallback only; production should always configure one of the secrets above.
+        raw = "aligna-dev-oauth-secret"
     return raw.encode()
 
 def _make_oauth_state() -> str:
@@ -218,7 +247,9 @@ def _verify_oauth_state(state: str) -> bool:
 
 # --- AUTH ROUTES ---
 @api_router.get("/auth/google/login")
-async def google_login():
+async def google_login(request: Request):
+    _rate_limit_or_429(f"oauth_login:{_client_ip(request)}", max_requests=30, window_seconds=60)
+
     """Redirect browser directly to Google OAuth with a stateless HMAC state token.
     No cookie required — works on all browsers including iOS Safari and Android Chrome.
     """
@@ -242,6 +273,8 @@ async def google_login():
 
 @api_router.get("/auth/google/callback")
 async def google_callback(request: Request, code: str = None, error: str = None, state: str = None):
+    _rate_limit_or_429(f"oauth_callback:{_client_ip(request)}", max_requests=60, window_seconds=300)
+
     """Handle Google OAuth callback, create session, redirect to frontend."""
     frontend_url = os.environ.get("FRONTEND_URL", "")
 
@@ -569,6 +602,11 @@ async def get_subscription(user=Depends(get_current_user)):
 
 @api_router.post("/payments/checkout")
 async def create_checkout(body: CheckoutRequest, user=Depends(get_current_user)):
+    allowed_origin = urlparse(os.environ.get("FRONTEND_URL", "")).netloc
+    provided_origin = urlparse(body.origin_url).netloc
+    if not allowed_origin or not provided_origin or provided_origin != allowed_origin:
+        raise HTTPException(status_code=400, detail="Invalid checkout origin")
+
     if body.plan not in PLAN_PRICES:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
@@ -692,8 +730,9 @@ async def lemonsqueezy_webhook(request: Request):
 
 # --- WAITLIST ROUTES ---
 @api_router.post("/waitlist")
-async def join_waitlist(body: WaitlistSignup):
+async def join_waitlist(body: WaitlistSignup, request: Request):
     """Save an email to the waitlist. Idempotent — returns count either way."""
+    _rate_limit_or_429(f"waitlist:{_client_ip(request)}", max_requests=10, window_seconds=600)
     existing = await db.waitlist.find_one({"email": body.email})
     if existing:
         count = await db.waitlist.count_documents({})
