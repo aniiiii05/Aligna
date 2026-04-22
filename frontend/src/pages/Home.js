@@ -17,8 +17,12 @@ const CATEGORY_ICONS = {
 };
 
 const getNotificationPermission = () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
-    return window.Notification.permission || 'default';
+    try {
+        if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
+        return window.Notification.permission || 'default';
+    } catch {
+        return 'default';
+    }
 };
 
 const Home = () => {
@@ -61,14 +65,18 @@ const Home = () => {
     }, []);
 
     const enableNotifications = async () => {
-        if (!('Notification' in window)) return;
-        const permission = await Notification.requestPermission();
-        setNotifStatus(permission);
-        if (permission === 'granted') {
-            new Notification('Aligna', {
-                body: "Reminders enabled! We'll nudge you for each ritual session.",
-                icon: '/assets/icons/Lotus.svg',
-            });
+        try {
+            if (typeof window === 'undefined' || !('Notification' in window)) return;
+            const permission = await window.Notification.requestPermission();
+            setNotifStatus(permission);
+            if (permission === 'granted') {
+                new window.Notification('Aligna', {
+                    body: "Reminders enabled! We'll nudge you for each ritual session.",
+                    icon: '/assets/icons/Lotus.svg',
+                });
+            }
+        } catch {
+            setNotifStatus('default');
         }
     };
 

@@ -7,8 +7,12 @@ import { API } from '../lib/api';
 
 const PLAN_LABELS = { free: 'Seed (Free)', pro: 'Bloom (Pro)', premium: 'Radiance (Premium)' };
 const getNotificationPermission = () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
-    return window.Notification.permission || 'default';
+    try {
+        if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
+        return window.Notification.permission || 'default';
+    } catch {
+        return 'default';
+    }
 };
 
 const Settings = () => {
@@ -25,20 +29,24 @@ const Settings = () => {
     };
 
     const handleNotifications = async () => {
-        if (!('Notification' in window)) return;
-        if (notifStatus === 'granted') {
-            // Browsers don't allow JS to revoke permission — guide the user
-            setShowNotifInfo(true);
-            return;
-        }
-        if (notifStatus === 'denied') return; // blocked in browser settings
-        const perm = await Notification.requestPermission();
-        setNotifStatus(perm);
-        if (perm === 'granted') {
-            new Notification('Aligna', {
-                body: "You'll now receive ritual reminders",
-                icon: '/assets/icons/Lotus.svg',
-            });
+        try {
+            if (typeof window === 'undefined' || !('Notification' in window)) return;
+            if (notifStatus === 'granted') {
+                // Browsers don't allow JS to revoke permission — guide the user
+                setShowNotifInfo(true);
+                return;
+            }
+            if (notifStatus === 'denied') return; // blocked in browser settings
+            const perm = await window.Notification.requestPermission();
+            setNotifStatus(perm);
+            if (perm === 'granted') {
+                new window.Notification('Aligna', {
+                    body: "You'll now receive ritual reminders",
+                    icon: '/assets/icons/Lotus.svg',
+                });
+            }
+        } catch {
+            setNotifStatus('default');
         }
     };
 
