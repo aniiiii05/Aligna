@@ -1,5 +1,6 @@
-/* Aligna App Styles */
+/* Aligna App Styles — dvh avoids iOS Safari 100vh underlap with the URL bar */
 .App {
-    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: 100svh;
     background-color: #FDFBF7;
 }

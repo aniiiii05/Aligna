@@ -60,7 +60,7 @@ const Waitlist = () => {
     };
 
     return (
-        <div className="min-h-screen bg-aligna-bg flex flex-col overflow-hidden">
+        <div className="min-h-dvh bg-aligna-bg flex flex-col overflow-hidden">
 
             {/* Ambient blobs */}
             <div className="fixed inset-0 pointer-events-none">

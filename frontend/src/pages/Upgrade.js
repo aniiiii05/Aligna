@@ -116,7 +116,7 @@ const Upgrade = () => {
 
     if (checkingPayment) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center px-6" data-testid="payment-checking">
+            <div className="min-h-dvh flex flex-col items-center justify-center px-6" data-testid="payment-checking">
                 <img src="/assets/icons/Hamsa.svg" alt="Processing" className="w-16 h-16 mb-6 animate-soft-pulse" />
                 <h2 className="font-heading text-2xl text-aligna-text mb-2">Verifying your upgrade...</h2>
                 <p className="text-aligna-text-secondary font-body text-sm">Please wait while we confirm your payment</p>
@@ -126,7 +126,7 @@ const Upgrade = () => {
 
     if (paymentSuccess) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center" data-testid="payment-success">
+            <div className="min-h-dvh flex flex-col items-center justify-center px-6 text-center" data-testid="payment-success">
                 <div className="w-20 h-20 rounded-full bg-aligna-primary/20 flex items-center justify-center mb-6 animate-glow">
                     <img src="/assets/icons/Sahassara.svg" alt="Success" className="w-12 h-12" />
                 </div>

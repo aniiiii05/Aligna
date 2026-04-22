@@ -234,7 +234,7 @@ const Goals = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-dvh flex items-center justify-center">
                 <img src="/assets/icons/Lotus.svg" alt="Loading" className="w-10 h-10 animate-soft-pulse" />
             </div>
         );

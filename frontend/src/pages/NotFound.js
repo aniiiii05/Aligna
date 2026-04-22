@@ -6,7 +6,7 @@ const NotFound = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-aligna-bg flex flex-col items-center justify-center px-6 text-center">
+        <div className="min-h-dvh bg-aligna-bg flex flex-col items-center justify-center px-6 text-center">
             {/* Ambient background */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-aligna-primary/8 blur-[80px]" />

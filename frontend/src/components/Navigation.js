@@ -74,9 +74,9 @@ const Navigation = () => {
             {/* Desktop Top Navigation */}
             <nav
                 data-testid="top-navigation"
-                className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-aligna-border"
+                className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-aligna-border pt-[env(safe-area-inset-top)]"
             >
-                <div className="max-w-5xl mx-auto w-full px-8 py-4 flex items-center justify-between">
+                <div className="max-w-5xl mx-auto w-full px-8 py-3 md:py-4 flex items-center justify-between">
                     {/* Logo */}
                     <NavLink to="/" className="flex items-center gap-2">
                         <img src="/assets/icons/Lotus.svg" alt="Aligna" className="w-7 h-7" />

@@ -15,7 +15,7 @@ const Privacy = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-aligna-bg">
+        <div className="min-h-dvh bg-aligna-bg">
             <div className="max-w-2xl mx-auto px-5 py-8 md:px-8">
                 {/* Back button */}
                 <button

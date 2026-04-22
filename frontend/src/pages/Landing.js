@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/api';
 
@@ -6,7 +6,21 @@ const Landing = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const err = params.get('error');
+        if (err === 'auth_failed') {
+            setError('Sign-in could not be completed. Please try again, or contact support if this keeps happening.');
+        } else if (err === 'auth_cancelled') {
+            setError('Sign-in was cancelled.');
+        }
+        if (err && window.history.replaceState) {
+            window.history.replaceState({}, '', '/login');
+        }
+    }, []);
+
     const handleGoogleLogin = () => {
+        setError('');
         setLoading(true);
         // Use the app's own /api path in production to keep auth first-party on iOS Safari.
         window.location.href = `${API}/auth/google/login`;

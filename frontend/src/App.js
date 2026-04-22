@@ -23,7 +23,7 @@ import NotFound from './pages/NotFound';
 const MainLayout = () => (
     <div className="min-h-dvh bg-aligna-bg">
         <Navigation />
-        <main className="pb-24 md:pb-0 md:pt-20">
+        <main className="pb-24 md:pb-0 md:pt-[calc(5.5rem+env(safe-area-inset-top,0px))]">
             <Outlet />
         </main>
     </div>

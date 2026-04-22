@@ -9,7 +9,7 @@ const FILTERS = ['All', 'Repetition', 'Journaling', 'Visualization', 'Ritual'];
 const TechniqueSheet = ({ technique, onClose, onUse }) => (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
         <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative z-10 w-full max-w-lg bg-aligna-surface rounded-t-3xl md:rounded-3xl max-h-[85vh] flex flex-col shadow-xl animate-float-up">
+        <div className="relative z-10 w-full max-w-lg bg-aligna-surface rounded-t-3xl md:rounded-3xl max-h-[85dvh] flex flex-col shadow-xl animate-float-up">
             {/* Header */}
             <div className={`rounded-t-3xl md:rounded-t-3xl bg-gradient-to-br ${technique.color.card} p-6 border-b ${technique.color.border} shrink-0`}>
                 <div className="flex items-start justify-between mb-3">

@@ -157,7 +157,7 @@ const Ritual = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+            <div className="min-h-dvh flex flex-col items-center justify-center gap-3">
                 <img src={MANI.meditating} alt="Mani meditating" className="w-24 h-24 animate-soft-pulse drop-shadow-sm" />
                 <p className="text-aligna-text-secondary font-body text-sm">Preparing your ritual...</p>
             </div>
@@ -186,7 +186,7 @@ const Ritual = () => {
         return (
             <div
                 data-testid="ritual-complete-screen"
-                className={`min-h-screen ${sessionObj?.bg || 'bg-aligna-bg'} flex flex-col items-center justify-center px-6 text-center`}
+                className={`min-h-dvh ${sessionObj?.bg || 'bg-aligna-bg'} flex flex-col items-center justify-center px-6 text-center`}
             >
                 <div className="animate-float-up">
                     <img src={MANI.trophy} alt="Mani celebrating!" className="w-32 h-32 mx-auto mb-4 drop-shadow-sm animate-glow" />
@@ -356,7 +356,7 @@ const Ritual = () => {
     return (
         <div
             data-testid="ritual-write-screen"
-            className={`min-h-screen ${sessionObj?.bg || 'bg-aligna-bg'} flex flex-col`}
+            className={`min-h-dvh ${sessionObj?.bg || 'bg-aligna-bg'} flex flex-col`}
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
             {/* Top Bar */}

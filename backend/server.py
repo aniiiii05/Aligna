@@ -9,7 +9,7 @@ import json
 import hmac
 import hashlib
 import secrets
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlparse, urlunsplit
 from pathlib import Path
 import re as _re
 from pydantic import BaseModel, field_validator
@@ -66,6 +66,153 @@ IS_PRODUCTION = os.environ.get("ENVIRONMENT", "development") == "production"
 COOKIE_SECURE = IS_PRODUCTION
 COOKIE_SAMESITE = "none" if IS_PRODUCTION else "lax"
 RATE_LIMIT_BUCKETS: dict[str, deque] = defaultdict(deque)
+
+
+def _strip_env(value: str | None) -> str:
+    if not value:
+        return ""
+    return value.strip().strip('"').strip("'")
+
+
+def _is_loopback_host(host: str) -> bool:
+    if not host:
+        return False
+    h = host.lower()
+    if h in ("localhost", "127.0.0.1", "::1"):
+        return True
+    return h.startswith("127.")
+
+
+def _is_loopback_redirect_uri(uri: str) -> bool:
+    """True if redirect URI clearly targets local development (not valid on production hosts)."""
+    if not uri:
+        return False
+    try:
+        p = urlparse(uri)
+        return _is_loopback_host((p.hostname or "").lower())
+    except Exception:
+        return False
+
+
+def _normalize_forwarded_host(host: str) -> str:
+    h = host.strip().lower()
+    if h.endswith(":443"):
+        return h[:-4]
+    if h.endswith(":80"):
+        return h[:-3]
+    return h
+
+
+def _enforce_https_redirect_uri(uri: str) -> str:
+    """Google requires HTTPS for non-localhost redirect URIs (RFC / OAuth validation rules)."""
+    try:
+        p = urlparse(uri)
+        host = (p.hostname or "").lower()
+        if not host or _is_loopback_host(host):
+            return uri
+        if p.scheme == "http":
+            return urlunsplit(("https", p.netloc, p.path, p.query, ""))
+        return uri
+    except Exception:
+        return uri
+
+
+def _finalize_oauth_redirect_uri(uri: str) -> str:
+    """Lowercase scheme/host, strip trailing slash on path — must match Google Console byte-for-byte."""
+    try:
+        p = urlparse(uri)
+        path = (p.path or "").rstrip("/")
+        if not path:
+            path = "/"
+        scheme = (p.scheme or "https").lower()
+        netloc = (p.netloc or "").lower()
+        return urlunsplit((scheme, netloc, path, "", ""))
+    except Exception:
+        return uri
+
+
+def _public_oauth_origin_from_env() -> str | None:
+    """Optional fixed public origin — set on Railway to avoid bad X-Forwarded-Proto (e.g. http)."""
+    raw = _strip_env(os.environ.get("PUBLIC_OAUTH_ORIGIN") or os.environ.get("OAUTH_PUBLIC_ORIGIN"))
+    if not raw:
+        return None
+    raw = raw.rstrip("/")
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if not parsed.netloc:
+        return None
+    host = (parsed.hostname or "").lower()
+    if _is_loopback_host(host):
+        scheme = parsed.scheme if parsed.scheme in ("http", "https") else "http"
+    else:
+        scheme = "https"
+    return f"{scheme}://{parsed.netloc}".rstrip("/")
+
+
+def _forwarded_public_origin(request: Request) -> str | None:
+    """Browser-facing origin when the API is behind a reverse proxy (e.g. Vercel → Railway)."""
+    fh_raw = request.headers.get("x-forwarded-host", "").split(",")[0].strip()
+    if not fh_raw:
+        return None
+    fh = _normalize_forwarded_host(fh_raw)
+    ph = urlparse(f"https://{fh}")
+    host = (ph.hostname or "").lower()
+    netloc = ph.netloc or fh
+    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    # Google rejects non-HTTPS redirect URIs for real domains. Proxies sometimes send
+    # X-Forwarded-Proto: http incorrectly — always use https for non-loopback hosts.
+    if _is_loopback_host(host):
+        if proto not in ("http", "https"):
+            proto = "http"
+    else:
+        proto = "https"
+    return f"{proto}://{netloc}".rstrip("/")
+
+
+def _google_oauth_redirect_uri(request: Request) -> str:
+    """OAuth redirect_uri — must match Google Cloud Console and the token exchange request."""
+    fixed = _public_oauth_origin_from_env()
+    if fixed:
+        return _finalize_oauth_redirect_uri(
+            _enforce_https_redirect_uri(f"{fixed}/api/auth/google/callback")
+        )
+
+    explicit = _strip_env(os.environ.get("GOOGLE_REDIRECT_URI"))
+    explicit = _enforce_https_redirect_uri(explicit) if explicit else ""
+    pub = _forwarded_public_origin(request)
+
+    if explicit and not _is_loopback_redirect_uri(explicit):
+        return _finalize_oauth_redirect_uri(explicit)
+
+    if pub:
+        return _finalize_oauth_redirect_uri(
+            _enforce_https_redirect_uri(f"{pub}/api/auth/google/callback")
+        )
+
+    if explicit:
+        return _finalize_oauth_redirect_uri(explicit)
+
+    fe = _strip_env(os.environ.get("FRONTEND_URL")).rstrip("/")
+    if fe:
+        parsed = urlparse(fe if "://" in fe else f"https://{fe}")
+        if parsed.scheme and parsed.netloc:
+            origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+            origin = _enforce_https_redirect_uri(origin)
+            return _finalize_oauth_redirect_uri(f"{origin}/api/auth/google/callback")
+
+    raise HTTPException(status_code=500, detail="Google OAuth not configured")
+
+
+def _frontend_browser_base(request: Request) -> str:
+    """Absolute base URL for redirects back to the SPA (fixes mis-set FRONTEND_URL behind Vercel)."""
+    fixed = _public_oauth_origin_from_env()
+    if fixed:
+        return fixed
+    pub = _forwarded_public_origin(request)
+    if pub:
+        return pub
+    fe = _strip_env(os.environ.get("FRONTEND_URL")).rstrip("/")
+    base = fe.split("#")[0].rstrip("/") if fe else ""
+    return _enforce_https_redirect_uri(base) if base else ""
 
 
 def _client_ip(request: Request) -> str:
@@ -248,17 +395,18 @@ def _verify_oauth_state(state: str) -> bool:
 # --- AUTH ROUTES ---
 @api_router.get("/auth/google/login")
 async def google_login(request: Request):
-    _rate_limit_or_429(f"oauth_login:{_client_ip(request)}", max_requests=30, window_seconds=60)
-
     """Redirect browser directly to Google OAuth with a stateless HMAC state token.
     No cookie required — works on all browsers including iOS Safari and Android Chrome.
     """
-    client_id   = os.environ.get("GOOGLE_CLIENT_ID", "")
-    redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "")
-    if not client_id or not redirect_uri:
+    _rate_limit_or_429(f"oauth_login:{_client_ip(request)}", max_requests=30, window_seconds=60)
+
+    client_id = _strip_env(os.environ.get("GOOGLE_CLIENT_ID"))
+    redirect_uri = _google_oauth_redirect_uri(request)
+    if not client_id:
         raise HTTPException(status_code=500, detail="Google OAuth not configured")
 
     state = _make_oauth_state()
+    logger.info("OAuth authorize redirect_uri=%s", redirect_uri)
     params = {
         "client_id":     client_id,
         "redirect_uri":  redirect_uri,
@@ -271,33 +419,61 @@ async def google_login(request: Request):
     return RedirectResponse(url=f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
 
 
+@api_router.get("/auth/google/config-check")
+async def google_oauth_config_check(request: Request):
+    """Public diagnostics: client_id and redirect_uri your server uses (compare in Google Cloud Console)."""
+    out: dict = {
+        "client_id": _strip_env(os.environ.get("GOOGLE_CLIENT_ID")) or None,
+        "x_forwarded_host": request.headers.get("x-forwarded-host"),
+        "x_forwarded_proto": request.headers.get("x-forwarded-proto"),
+        "PUBLIC_OAUTH_ORIGIN": _strip_env(os.environ.get("PUBLIC_OAUTH_ORIGIN")) or None,
+        "GOOGLE_REDIRECT_URI_env": _strip_env(os.environ.get("GOOGLE_REDIRECT_URI")) or None,
+        "FRONTEND_URL": _strip_env(os.environ.get("FRONTEND_URL")) or None,
+    }
+    try:
+        out["redirect_uri_used"] = _google_oauth_redirect_uri(request)
+    except HTTPException as exc:
+        out["redirect_uri_used"] = None
+        out["redirect_uri_error"] = exc.detail
+    out["google_console_hint"] = (
+        "In Google Cloud → APIs & Services → Credentials → your Web client → "
+        "Authorized redirect URIs: add redirect_uri_used exactly (same client_id)."
+    )
+    return out
+
+
 @api_router.get("/auth/google/callback")
 async def google_callback(request: Request, code: str = None, error: str = None, state: str = None):
+    """Handle Google OAuth callback, create session, redirect to frontend."""
     _rate_limit_or_429(f"oauth_callback:{_client_ip(request)}", max_requests=60, window_seconds=300)
 
-    """Handle Google OAuth callback, create session, redirect to frontend."""
-    frontend_url = os.environ.get("FRONTEND_URL", "")
+    frontend_base = _frontend_browser_base(request)
+    oauth_redirect_uri = _google_oauth_redirect_uri(request)
 
     # Verify stateless HMAC state — no cookie dependency
     if not state or not _verify_oauth_state(state):
         logger.warning("OAuth state verification failed")
-        return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
+        return RedirectResponse(url=f"{frontend_base}/login?error=auth_failed")
 
     if error or not code:
-        return RedirectResponse(url=f"{frontend_url}/login?error=auth_cancelled")
+        return RedirectResponse(url=f"{frontend_base}/login?error=auth_cancelled")
 
     # Exchange authorization code for tokens
     async with httpx.AsyncClient() as http:
         token_resp = await http.post(GOOGLE_TOKEN_URL, data={
             "code": code,
-            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
-            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
-            "redirect_uri": os.environ.get("GOOGLE_REDIRECT_URI", ""),
+            "client_id": _strip_env(os.environ.get("GOOGLE_CLIENT_ID")),
+            "client_secret": _strip_env(os.environ.get("GOOGLE_CLIENT_SECRET")),
+            "redirect_uri": oauth_redirect_uri,
             "grant_type": "authorization_code",
         })
         if token_resp.status_code != 200:
-            logger.error(f"Google token exchange failed: {token_resp.text}")
-            return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
+            logger.error(
+                "Google token exchange failed: %s (redirect_uri used: %s)",
+                token_resp.text,
+                oauth_redirect_uri,
+            )
+            return RedirectResponse(url=f"{frontend_base}/login?error=auth_failed")
 
         access_token = token_resp.json().get("access_token")
 
@@ -307,13 +483,13 @@ async def google_callback(request: Request, code: str = None, error: str = None,
             headers={"Authorization": f"Bearer {access_token}"}
         )
         if user_resp.status_code != 200:
-            return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
+            return RedirectResponse(url=f"{frontend_base}/login?error=auth_failed")
 
         google_user = user_resp.json()
 
     email = google_user.get("email")
     if not email:
-        return RedirectResponse(url=f"{frontend_url}/login?error=auth_failed")
+        return RedirectResponse(url=f"{frontend_base}/login?error=auth_failed")
 
     # Create or update user record
     user_doc = await db.users.find_one({"email": email}, {"_id": 0})
@@ -365,7 +541,7 @@ async def google_callback(request: Request, code: str = None, error: str = None,
     }, separators=(',', ':'))
     user_b64 = base64.urlsafe_b64encode(user_summary.encode()).decode().rstrip('=')
 
-    redirect = RedirectResponse(url=f"{frontend_url}/auth/callback?token={session_token}&ud={user_b64}")
+    redirect = RedirectResponse(url=f"{frontend_base}/auth/callback?token={session_token}&ud={user_b64}")
     redirect.set_cookie(
         key="session_token", value=session_token,
         httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, path="/",
@@ -782,8 +958,29 @@ async def get_waitlist_admin(request: Request):
 
 
 @api_router.get("/")
-async def root():
-    return {"message": "Aligna API"}
+async def root(request: Request):
+    """GET /api — add ?oauth_debug=1 for OAuth diagnostics (same data as /api/auth/google/config-check)."""
+    payload: dict = {"message": "Aligna API"}
+    if request.query_params.get("oauth_debug") == "1":
+        oauth: dict = {
+            "client_id": _strip_env(os.environ.get("GOOGLE_CLIENT_ID")) or None,
+            "x_forwarded_host": request.headers.get("x-forwarded-host"),
+            "x_forwarded_proto": request.headers.get("x-forwarded-proto"),
+            "PUBLIC_OAUTH_ORIGIN": _strip_env(os.environ.get("PUBLIC_OAUTH_ORIGIN")) or None,
+            "GOOGLE_REDIRECT_URI_env": _strip_env(os.environ.get("GOOGLE_REDIRECT_URI")) or None,
+            "FRONTEND_URL": _strip_env(os.environ.get("FRONTEND_URL")) or None,
+        }
+        try:
+            oauth["redirect_uri_used"] = _google_oauth_redirect_uri(request)
+        except HTTPException as exc:
+            oauth["redirect_uri_used"] = None
+            oauth["redirect_uri_error"] = exc.detail
+        oauth["hint"] = (
+            "Authorized redirect URIs (Google Cloud → Credentials → this Web client) "
+            "must include redirect_uri_used exactly."
+        )
+        payload["oauth"] = oauth
+    return payload
 
 
 app.include_router(api_router)

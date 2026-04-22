@@ -37,7 +37,7 @@ const WaitlistAdmin = () => {
     const maxCount = topDays.length ? Math.max(...topDays.map(([, v]) => v), 1) : 1;
 
     return (
-        <div className="min-h-screen bg-aligna-bg">
+        <div className="min-h-dvh bg-aligna-bg">
 
             {/* Ambient */}
             <div className="fixed inset-0 pointer-events-none">

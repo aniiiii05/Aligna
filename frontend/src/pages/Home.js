@@ -86,7 +86,7 @@ const Home = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+            <div className="min-h-dvh flex flex-col items-center justify-center gap-3">
                 <img src={MANI.meditating} alt="Mani meditating" className="w-24 h-24 animate-soft-pulse drop-shadow-sm" />
                 <p className="text-aligna-text-secondary font-body text-sm">Aligning...</p>
             </div>
