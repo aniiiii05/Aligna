@@ -71,7 +71,10 @@ RATE_LIMIT_BUCKETS: dict[str, deque] = defaultdict(deque)
 def _strip_env(value: str | None) -> str:
     if not value:
         return ""
-    return value.strip().strip('"').strip("'")
+    # Remove invisible line-break/tab characters often introduced by copy-paste
+    # in cloud env var UIs; these can break OAuth redirect_uri matching.
+    cleaned = value.replace("\r", "").replace("\n", "").replace("\t", "")
+    return cleaned.strip().strip('"').strip("'")
 
 
 def _is_loopback_host(host: str) -> bool:
