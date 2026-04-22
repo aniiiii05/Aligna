@@ -6,11 +6,15 @@ import { LogOut, Bell, BellOff, Crown, X } from 'lucide-react';
 import { API } from '../lib/api';
 
 const PLAN_LABELS = { free: 'Seed (Free)', pro: 'Bloom (Pro)', premium: 'Radiance (Premium)' };
+const getNotificationPermission = () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
+    return window.Notification.permission || 'default';
+};
 
 const Settings = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [notifStatus, setNotifStatus] = useState(Notification?.permission || 'default');
+    const [notifStatus, setNotifStatus] = useState(getNotificationPermission);
     const [loggingOut, setLoggingOut] = useState(false);
     const [showNotifInfo, setShowNotifInfo] = useState(false);
 

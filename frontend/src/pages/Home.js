@@ -16,6 +16,11 @@ const CATEGORY_ICONS = {
     peace:     '/assets/icons/Equanimity.svg',
 };
 
+const getNotificationPermission = () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
+    return window.Notification.permission || 'default';
+};
+
 const Home = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -23,7 +28,7 @@ const Home = () => {
     const [todayEntries, setTodayEntries] = useState([]);
     const [streak, setStreak]         = useState({ streak: 0, longest_streak: 0, total_days: 0 });
     const [loading, setLoading]       = useState(true);
-    const [notifStatus, setNotifStatus] = useState(Notification?.permission || 'default');
+    const [notifStatus, setNotifStatus] = useState(getNotificationPermission);
 
     const getGreeting = () => {
         const h = new Date().getHours();
