@@ -1,0 +1,18 @@
+{
+  "name": "Aligna",
+  "short_name": "Aligna",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F7F5F2",
+  "theme_color": "#6E7A75",
+  "description": "Manifestation practice — goals, rituals, and streaks.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

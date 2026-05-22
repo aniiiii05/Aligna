@@ -11,6 +11,7 @@ import '../../screens/home/home_screen.dart';
 import '../../screens/progress/progress_screen.dart';
 import '../../screens/ritual/ritual_screen.dart';
 import '../../screens/settings/settings_screen.dart';
+import '../../screens/upgrade/upgrade_screen.dart';
 import '../../screens/shell/main_shell.dart';
 import '../../screens/splash/splash_screen.dart';
 
@@ -61,6 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/goals', builder: (_, __) => const GoalsScreen()),
           GoRoute(path: '/progress', builder: (_, __) => const ProgressScreen()),
           GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+          GoRoute(path: '/upgrade', builder: (_, __) => const UpgradeScreen()),
         ],
       ),
     ],

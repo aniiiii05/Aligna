@@ -27,6 +27,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           ListTile(
+            leading: const Icon(Icons.workspace_premium_outlined),
+            title: const Text('Upgrade plan'),
+            onTap: () => context.push('/upgrade'),
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sign out'),
             onTap: () async {

@@ -135,7 +135,7 @@ def _finalize_oauth_redirect_uri(uri: str) -> str:
 
 
 def _public_oauth_origin_from_env() -> str | None:
-    """Optional fixed public origin — set on Railway to avoid bad X-Forwarded-Proto (e.g. http)."""
+    """Optional fixed public origin — set on Vercel to avoid bad X-Forwarded-Proto (e.g. http)."""
     raw = _strip_env(os.environ.get("PUBLIC_OAUTH_ORIGIN") or os.environ.get("OAUTH_PUBLIC_ORIGIN"))
     if not raw:
         return None
@@ -152,7 +152,7 @@ def _public_oauth_origin_from_env() -> str | None:
 
 
 def _forwarded_public_origin(request: Request) -> str | None:
-    """Browser-facing origin when the API is behind a reverse proxy (e.g. Vercel → Railway)."""
+    """Browser-facing origin when the API is behind a reverse proxy (e.g. Vercel same-origin /api)."""
     fh_raw = request.headers.get("x-forwarded-host", "").split(",")[0].strip()
     if not fh_raw:
         return None
