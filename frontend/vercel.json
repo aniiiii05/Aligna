@@ -1,14 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
+  "$comment": "Deprecated: set Vercel Root Directory to Aligna repo root and use ../vercel.json instead.",
+  "buildCommand": "cd .. && bash scripts/build-flutter-web.sh",
+  "outputDirectory": "../aligna_app/build/web",
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://practical-healing-production-bb7a.up.railway.app/api/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "../api/index.py": { "maxDuration": 30 }
+  }
 }
