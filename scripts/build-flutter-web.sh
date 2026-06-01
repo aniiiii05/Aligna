@@ -15,5 +15,15 @@ if ! command -v flutter >/dev/null 2>&1; then
 fi
 
 cd "$APP_DIR"
+
+# Ensure generated web scaffolding (icons, plugin registrant, etc.)
+if [ ! -f "web/icons/Icon-192.png" ]; then
+  echo "Scaffolding Flutter web project..."
+  flutter create . --project-name aligna_app --platforms=web
+fi
+
 flutter pub get
+flutter analyze --no-fatal-infos --no-fatal-warnings
+
+echo "Building Flutter web release..."
 flutter build web --release --base-href /

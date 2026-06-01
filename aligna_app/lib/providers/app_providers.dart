@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 
@@ -12,7 +13,7 @@ final apiClientProvider = FutureProvider<ApiClient>((ref) async {
   return auth.api;
 });
 
-final authUserProvider = FutureProvider((ref) async {
+final authUserProvider = FutureProvider<AlignaUser?>((ref) async {
   final auth = await ref.watch(authServiceProvider.future);
   return auth.fetchMe();
 });

@@ -21,7 +21,6 @@ ThemeData buildAlignaTheme() {
     colorScheme: ColorScheme.fromSeed(
       seedColor: AlignaColors.primary,
       surface: AlignaColors.surface,
-      background: AlignaColors.bg,
     ),
     scaffoldBackgroundColor: AlignaColors.bg,
   );
@@ -36,7 +35,7 @@ ThemeData buildAlignaTheme() {
       elevation: 0,
       foregroundColor: AlignaColors.text,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: AlignaColors.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(

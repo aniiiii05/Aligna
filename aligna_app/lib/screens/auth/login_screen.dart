@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,7 +41,10 @@ class LoginScreen extends ConsumerWidget {
                 onPressed: () async {
                   final auth = await ref.read(authServiceProvider.future);
                   final uri = Uri.parse(auth.googleLoginUrl);
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  await launchUrl(
+                    uri,
+                    mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+                  );
                 },
                 child: const Text('Continue with Google'),
               ),

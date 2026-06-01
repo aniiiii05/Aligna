@@ -1,4 +1,5 @@
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,19 +19,25 @@ class AlignaApp extends ConsumerStatefulWidget {
 }
 
 class _AlignaAppState extends ConsumerState<AlignaApp> {
-  final _appLinks = AppLinks();
+  AppLinks? _appLinks;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _listenDeepLinks());
+    if (!kIsWeb) {
+      _appLinks = AppLinks();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _listenDeepLinks());
+    }
   }
 
   Future<void> _listenDeepLinks() async {
-    final initial = await _appLinks.getInitialLink();
+    final links = _appLinks;
+    if (links == null) return;
+
+    final initial = await links.getInitialLink();
     if (initial != null) _handleUri(initial);
 
-    _appLinks.uriLinkStream.listen((uri) => _handleUri(uri));
+    links.uriLinkStream.listen(_handleUri);
   }
 
   void _handleUri(Uri uri) {
