@@ -1,15 +1,19 @@
 """
 Vercel serverless entrypoint when the Vercel Root Directory is `frontend`.
-Repo-root deploys use /api/index.py instead.
 """
 import sys
 from pathlib import Path
 
-# frontend/api/index.py -> repo root is two levels up
-ROOT = Path(__file__).resolve().parent.parent.parent
-BACKEND = ROOT / "backend"
+API_DIR = Path(__file__).resolve().parent
+FRONTEND_ROOT = API_DIR.parent
+
+# buildCommand copies ../backend -> frontend/backend before deploy
+BACKEND = FRONTEND_ROOT / "backend"
+if not (BACKEND / "server.py").is_file():
+    BACKEND = FRONTEND_ROOT.parent / "backend"
+
 sys.path.insert(0, str(BACKEND))
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(FRONTEND_ROOT.parent))
 
 from server import app  # noqa: E402
 from mangum import Mangum

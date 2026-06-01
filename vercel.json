@@ -1,11 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "pip install -r api/requirements.txt",
   "buildCommand": "bash scripts/build-flutter-web.sh",
   "outputDirectory": "aligna_app/build/web",
   "functions": {
     "api/index.py": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "backend/**"
     }
   },
   "rewrites": [

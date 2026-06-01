@@ -1,11 +1,11 @@
 {
-  "$comment": "Active when Vercel Root Directory is 'frontend'. Ships React UI + Python API on Vercel. For Flutter web, set Root Directory to repo root (see DEPLOY.md).",
-  "installCommand": "pip install -r api/requirements.txt",
-  "buildCommand": "npm run build",
+  "$comment": "Root Directory must be 'frontend'. Vercel installs Python deps from api/requirements.txt automatically — do not run pip in installCommand.",
+  "buildCommand": "cp -r ../backend backend && npm run build",
   "outputDirectory": "build",
   "functions": {
     "api/index.py": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "backend/**"
     }
   },
   "rewrites": [
