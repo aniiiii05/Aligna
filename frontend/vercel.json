@@ -1,12 +1,16 @@
 {
-  "$comment": "Deprecated: set Vercel Root Directory to Aligna repo root and use ../vercel.json instead.",
-  "buildCommand": "cd .. && bash scripts/build-flutter-web.sh",
-  "outputDirectory": "../aligna_app/build/web",
+  "$comment": "Active when Vercel Root Directory is 'frontend'. Ships React UI + Python API on Vercel. For Flutter web, set Root Directory to repo root (see DEPLOY.md).",
+  "installCommand": "pip install -r api/requirements.txt",
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.12",
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "../api/index.py": { "maxDuration": 30 }
-  }
+  ]
 }

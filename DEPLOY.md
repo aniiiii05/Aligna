@@ -1,18 +1,40 @@
 # Deploy Aligna (Flutter + FastAPI on Vercel)
 
-Aligna runs as a **single Vercel project**: Flutter web at `/` and the Python API at `/api/*`. Railway is no longer used.
+Railway is **no longer used**. The API must run on Vercel (`/api/*`).
+
+## Why alignaa.org can look “stuck on Railway”
+
+| What you see | Cause |
+|--------------|--------|
+| Old React landing (“Continue with Google”) | Vercel **Root Directory** is still `frontend` and the last successful deploy was the React build — Flutter was never built in production. |
+| Login/API broken, or “Application not found” | Older `frontend/vercel.json` proxied `/api` to `practical-healing-production-bb7a.up.railway.app`, but that Railway service is **gone**. Newer config pointed at `../api/index.py`, which Vercel does **not** deploy when the root is `frontend`. |
+| Code on GitHub is updated but site is not | Pushing to GitHub does nothing until Vercel **redeploys** and env vars are set on the **Vercel project**. |
+
+**All migration code is on `main` (commit `bfd45e7`+).** The gap is Vercel project settings + env vars + a successful deploy.
 
 ## 1. Vercel project settings
 
-In [Vercel Dashboard](https://vercel.com) → your **alignaa.org** project:
+In [Vercel Dashboard](https://vercel.com) → **alignaa.org** project → **Settings** → **General**:
+
+### Option A — Quick fix (React UI + Vercel API, works with Root = `frontend`)
 
 | Setting | Value |
 |--------|--------|
-| **Root Directory** | `Aligna` (folder that contains this `vercel.json`) |
+| **Root Directory** | `frontend` |
 | **Framework Preset** | Other |
-| Install / Build / Output | From `vercel.json` (do not override unless debugging) |
+| Build / Output | From `frontend/vercel.json` (`npm run build` → `build/`) |
 
-If Root Directory is still `frontend`, production will keep serving the old React app.
+Redeploy. `/api/*` uses `frontend/api/index.py` (no Railway).
+
+### Option B — Full Flutter web (recommended when ready)
+
+| Setting | Value |
+|--------|--------|
+| **Root Directory** | *(empty — repository root)* |
+| **Framework Preset** | Other |
+| Build / Output | From root `vercel.json` (Flutter web + `api/index.py`) |
+
+Clear any custom Install/Build/Output overrides in the Vercel UI so `vercel.json` controls the build.
 
 ## 2. Environment variables
 
